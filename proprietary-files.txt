@@ -1,0 +1,5 @@
+# Proprietary inputs are external to this repository.
+# The supplied stock ROM contains xbl.img (AArch64 ELF), boot.img, vendor_boot.img (v3),
+# and dtbo.img. The elish DTBO is entry 12 / board ID 47.
+# No DXE payload has been extracted or hash-pinned. Do not copy vendor firmware into Git.
+# Populate this manifest only in the UEFI integration step, with verified source hashes.

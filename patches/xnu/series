@@ -1,0 +1,12 @@
+# Device-level patch series.
+#
+# sheng-platform-power.patch: this machine has no Apple PMGR, so AMFI waits for an ApplePMGRNub that
+# will never exist and panics with 'AMFI: No PMGR?' unless the original PMGR provider is invoked at this
+# point in bsd_init(). Upstream keeps it in the SM8550 SoC package; our SM8250 package does not carry it.
+# Without it the bridge that build-platform-power.py compiles is never called and the sheng-pmgr=2 boot
+# argument is a no-op.
+#
+# It is also the reason the board lists this series *before* the OS profile's series: the ipados-17.7.11
+# series' zzz-boot-progress.patch edits the same bsd_init() region (it wraps the sheng_pmgr_run() call
+# with boot_progress stages) and cannot apply until that block exists.
+sheng-platform-power.patch

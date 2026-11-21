@@ -1,0 +1,17 @@
+// SPDX-License-Identifier: BSD-2-Clause-Patent
+// Xiaomi Pad 5 Pro Wi-Fi (elish, SM8250-AC / Snapdragon 870).
+//
+// This scaffold adds board identity only. DRAM ranges and board-enabled peripherals are
+// intentionally omitted until their runtime ownership and elish-specific state are verified.
+/dts-v1/;
+
+/include/ "sm8250.dtsi"
+
+/ {
+    model = "Xiaomi Pad 5 Pro Wi-Fi";
+    compatible = "xiaomi,elish", "qcom,sm8250";
+
+    chosen {
+        unixnu,board = "elish";
+    };
+};

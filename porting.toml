@@ -1,0 +1,203 @@
+schema_version = 1
+
+[device]
+name = "elish"
+soc = "SM8250-AC"
+os_profile = "ipados-17.7.11-21H461"
+summary = "Xiaomi Pad 5 Pro Wi-Fi (M2105K81AC). Format 2 scaffold only; not built or booted."
+
+[[area]]
+id = "configuration"
+status = "planned"
+components = ["ArmDTPlatform", "ArmCpu", "SoftwareAES", "XnuPrelink", "DarwinBoot"]
+paths = ["AGENTS.md", "README.md", "board.toml", "feeds.toml", "unixnu.lock", "configs/**", "dts/**", "local.toml.example", "package/unixnu.toml", ".github/workflows/porting-record.yml"]
+inputs = ["Read-only Android identity: M2105K81AC/elish, SM8250-AC soc_id 356 revision 2.1, CPUs 0-7, display 1600x2560; Linux MemTotal is 7775836 kB and is not a DRAM map.", "UniXNU profile ipados-17.7.11-21H461 selects iPad7,1/J120AP."]
+configuration = ["board.toml identifies Wi-Fi elish and the target OS profile; feeds.toml and unixnu.lock contain matching pins for all nine declared Git sources.", "Stage 1 selects only ArmDTPlatform, ArmCpu, SoftwareAES, XnuPrelink and DarwinBoot; memory and userdata geometry remain gated."]
+procedure = ["Ran elish_defconfig, status --json, record validation, static preflight, tree assembly and release --check --no-deps; the patch plan contains 62 entries."]
+findings = ["The Wi-Fi elish target is distinct from 5G enuma. The sibling Format 2 draft had copied enuma's userdata geometry and an unverified DRAM size; those values are no longer used."]
+completion = ["The selected components and patch order appear in status; all declared source commits match unixnu.lock; board, README and porting record identify the same target."]
+limits = ["The full unixnu fetch/package --check was not completed: its default submodule sync includes unrelated core modules and was interrupted. DTS compilation was not run because dtc is unavailable on this Windows host."]
+next_action = ["On a supported macOS/Linux host, complete the full fetch and package --check, compile the DTS, then continue to the UEFI step."]
+evidence = []
+
+[[area]]
+id = "firmware"
+status = "planned"
+components = ["DarwinBoot"]
+paths = ["proprietary-files.txt", "board.toml", "dts/**", "package/**"]
+inputs = ["The supplied stock ROM has boot.img (Android header v3), vendor_boot.img (v3), dtbo.img and xbl.img. Local hashes and extraction notes are in the UniXNU checkout's hardware inventory.", "Stock DTBO entry 12 identifies elish board ID 47; no vendor DXE image has been extracted."]
+configuration = ["board.toml names a future elishPkg and a preflight gate; no elish UEFI platform package or firmware binary is present."]
+procedure = ["Create and review the elish Mu-Silicium package in the next plan step; use only verified vendor inputs and record their hashes."]
+findings = ["The stock ROM does not contain a GPT layout file in the supplied extraction. No proprietary image has been copied into this repository."]
+completion = ["The firmware builds, enters UniXNU, publishes a validated framebuffer and preserves a measured memory map."]
+limits = ["UEFI package, runtime DRAM map, vendor DXE extraction and boot-image compatibility are not established."]
+next_action = ["Implement the elish UEFI platform only after board inputs are pinned; do not boot an image without per-image authorization."]
+evidence = []
+
+[[area]]
+id = "cpu"
+status = "planned"
+components = ["ArmCpu"]
+paths = ["dts/**", "configs/elish_defconfig"]
+inputs = ["Android reports CPUs 0-7 present. CPU topology, GICv3 and timer details come from the pinned SM8250 SoC source, not an elish XNU boot."]
+configuration = ["ArmCpu is selected in stage 1; CPU nodes and interrupt handling are supplied by the SoC package."]
+procedure = ["Build and boot only after memory and firmware inputs are verified; check each CPU entry and timer/IPI behavior separately."]
+findings = ["The Android CPU-present list establishes core count, not XNU bring-up or topology behavior."]
+completion = ["Every enabled CPU reaches its entry checkpoint and timer/IPI handling works on each enabled CPU."]
+limits = ["No XNU boot or per-core execution has been observed on elish."]
+next_action = ["Verify SoC source resolution, then test CPU bring-up during an authorized RAM-only boot."]
+evidence = []
+
+[[area]]
+id = "memory"
+status = "planned"
+components = []
+paths = ["dts/elish.dts", "board.toml", "scripts/check-elish.py"]
+inputs = ["Android MemTotal is 7775836 kB. The stock vendor_boot v2.1 SoC tree has a zero-filled memory reg and 22 reserved-memory entries; this does not establish runtime DRAM banks or free ranges."]
+configuration = ["The board DTS intentionally has no memory node and board.toml omits payload.dram_size. Default preflight blocks firmware/image builds while memory_map is unverified."]
+procedure = ["Obtain the runtime memory map and reservation ownership; reconcile overlapping display reservations before adding any bank or DMA range."]
+findings = ["The previous contiguous 8 GiB map was inferred from MemTotal and is removed; MemTotal is OS-visible RAM, not a bank map."]
+completion = ["All handoff regions are accounted for and each enabled DMA engine uses a documented, verified allocation and cache policy."]
+limits = ["DRAM bank base/size, gaps, firmware ownership and usable ranges are unknown."]
+next_action = ["Measure the runtime map in an authorized recovery/root environment and update the evidence ledger before encoding memory in DTS."]
+evidence = []
+
+[[area]]
+id = "storage"
+status = "planned"
+components = []
+paths = ["board.toml", "dts/elish.dts", "configs/**", "package/**"]
+inputs = ["Read-only Android identifies UFS route 1d84000.ufshc and userdata at /dev/block/sda34. User-confirmed fastboot capacity is 226308829184 bytes; partition start, exact GPT end LBA and logical sector size are unknown.", "The supplied ROM contains no GPT/layout file; fastboot fetch returned no image."]
+configuration = ["Stage 1 does not enable UFS/PHY. [userdata] uses zero sentinels; no userdata image can be sized from them.", "The future plan uses UFS windows for OS/SystemOS and a separately allocated Data persistence window; neither is implemented for elish."]
+procedure = ["After storage ABI review, measure the target GPT and sector size, implement UFS/SMMU ownership, validate reads and root-volume selection, then separately authorize any persistent write."]
+findings = ["The earlier inherited enuma values imply a partition size that conflicts with the confirmed fastboot capacity and have been removed."]
+completion = ["Controller and DMA facts match hardware; capacity/GPT and known reads are correct; OS/SystemOS mount; Data writes survive the specified restart and recovery checks."]
+limits = ["Exact userdata geometry, UFS hardware ownership, root volume UUID on device and Data persistence are not verified. No device partition write is authorized."]
+next_action = ["Obtain exact GPT and logical-sector measurements before enabling storage or creating userdata images."]
+evidence = []
+
+[[area]]
+id = "display"
+status = "planned"
+components = []
+paths = ["package/**", "dts/elish.dts", "configs/**"]
+inputs = ["Android reports 1600x2560. The supplied elish DTBO has K81 panel/backlight data, including KTZ8866; two panel variants are present and the fitted variant is unknown."]
+configuration = ["No display driver or board peripheral is enabled in stage 1."]
+procedure = ["First inspect any firmware framebuffer without panel writes; identify the fitted panel before implementing display or backlight control."]
+findings = ["Stock DTBO source distinguishes elish board ID 47 from enuma board ID 46; the panel-maker variant remains unresolved."]
+completion = ["A known frame has correct geometry and colors; presentation and brightness control work across repeated boots."]
+limits = ["No XNU framebuffer, panel transition or brightness operation has been tested."]
+next_action = ["Identify the active K81 panel variant and validate firmware framebuffer handoff before stage-3 driver work."]
+evidence = []
+
+[[area]]
+id = "input"
+status = "planned"
+components = []
+paths = ["package/**", "dts/elish.dts", "configs/**"]
+inputs = ["Android input reports NVTCapacitiveTouchScreen and NVTCapacitivePen with 10 slots and 1600x2560 coordinate ranges. The stock elish overlay and public DTS candidate describe Novatek SPI wiring, CS0, 19.2 MHz and TLMM IRQ 39."]
+configuration = ["No touch or button driver is selected in stage 1; the exact touch part and active firmware variant are not established by the input name alone."]
+procedure = ["Confirm the active controller/firmware and coordinate orientation, then test contact, multitouch IDs, release events and buttons end to end."]
+findings = ["The runtime input names confirm a touch/pen device but do not alone prove NT36523 or its board wiring."]
+completion = ["Touch maps correctly; simultaneous contacts retain stable IDs; releases and physical buttons produce expected events."]
+limits = ["No UniXNU input events have been tested on elish."]
+next_action = ["Correlate the fitted panel-maker ID and Novatek firmware variant before selecting a touch implementation."]
+evidence = []
+
+[[area]]
+id = "gpu"
+status = "planned"
+components = []
+paths = ["package/**", "configs/**", "dts/**"]
+inputs = ["SM8250-AC is the Adreno 650 platform; the pinned SoC package is a candidate source for A650 GMU support."]
+configuration = ["No GPU component is selected in stage 1. Do not use the Adreno 740/SM8550 kit."]
+procedure = ["Defer GPU work until storage, display, memory ownership, firmware and SMMU paths are stable."]
+findings = ["A compatible SoC package or source implementation is not proof of elish GPU operation."]
+completion = ["GPU submissions, memory mapping, fences and a known Metal-rendered image pass on hardware."]
+limits = ["No GPU firmware, power policy or XNU/Metal execution has been validated on elish."]
+next_action = ["Keep GPU disabled until the earlier bring-up stages are verified."]
+evidence = []
+
+[[area]]
+id = "network"
+status = "planned"
+components = []
+paths = ["package/**", "dts/**", "proprietary-files.txt"]
+inputs = ["The target is the Wi-Fi SKU. The stock SoC DTB contains a qca6390-compatible CNSS node; the exact live Wi-Fi firmware and operating path remain to be confirmed."]
+configuration = ["No wireless component or firmware is selected in stage 1."]
+procedure = ["Identify the active Wi-Fi/BT hardware and firmware, then test scanning, association, traffic and Bluetooth separately."]
+findings = ["elish is not the enuma cellular variant; no baseband path is in scope."]
+completion = ["Wi-Fi association and sustained traffic pass; Bluetooth pairing and data transfer are separately verified."]
+limits = ["The candidate DT node does not establish a working UniXNU driver or identify every wireless firmware input."]
+next_action = ["Confirm the active Wi-Fi/BT devices and firmware ownership from the target configuration."]
+evidence = []
+
+[[area]]
+id = "cellular"
+status = "not-applicable"
+components = []
+paths = ["board.toml", "porting.toml"]
+inputs = ["M2105K81AC is the Xiaomi Pad 5 Pro Wi-Fi SKU."]
+configuration = ["No cellular modem, SIM, baseband firmware or cellular data path is configured."]
+procedure = ["Do not import enuma/5G modem support into the elish Wi-Fi port."]
+findings = ["The 5G enuma tablet is a different target."]
+completion = ["Not applicable to the Wi-Fi SKU."]
+limits = ["Cellular/baseband support is out of scope for this device repository."]
+next_action = ["None."]
+evidence = []
+
+[[area]]
+id = "audio"
+status = "planned"
+components = []
+paths = ["package/**", "dts/**", "proprietary-files.txt"]
+inputs = ["The stock SoC DTB contains Kona audio/DSP data; public elish DTS candidates include CS35L41 amplifiers. Active codecs and firmware remain to be confirmed against the selected overlay."]
+configuration = ["No audio or DSP component is selected in stage 1."]
+procedure = ["Inventory firmware and codec routes, then verify playback, capture, route changes and shutdown/restart behavior."]
+findings = ["DT declarations identify candidates, not a working audio path."]
+completion = ["Each declared route handles the selected formats through playback or capture and stops cleanly."]
+limits = ["No audio/DSP operation has been tested on elish."]
+next_action = ["Resolve the active audio overlay and firmware dependencies after boot and storage basics."]
+evidence = []
+
+[[area]]
+id = "power"
+status = "planned"
+components = []
+paths = ["package/**", "patches/xnu/**", "scripts/build-platform-power.py", "configs/elish_defconfig"]
+inputs = ["A PMGR bridge and command-line setting exist in the draft, based on a same-family implementation; no elish power behavior has been verified."]
+configuration = ["CONFIG_XNU_SHENG_PMGR and the sheng-pmgr argument are stage-1 candidates and must be reviewed against the pinned profile and elish runtime."]
+procedure = ["Review the bridge and boot argument before an authorized boot; implement battery, charging, thermal and sleep behavior only from measured evidence."]
+findings = ["A lifecycle/publication bridge is not a functional power-management backend."]
+completion = ["Battery/charging readings match observations and each claimed sleep/resume transition restores dependent peripherals."]
+limits = ["Battery, charging, thermal policy and sleep/resume are untested."]
+next_action = ["Review the inherited PMGR bridge and validate basic platform stability before adding power controls."]
+evidence = []
+
+[[area]]
+id = "packaging"
+status = "planned"
+components = ["XnuPrelink", "DarwinBoot"]
+paths = ["scripts/package.sh", "scripts/build-link-stubs.py", "scripts/build-platform-power.py", "package/**", "board.toml", ".github/workflows/package.yml"]
+inputs = ["Target profile is iPadOS 17.7.11/21H461. The supplied stock boot and vendor_boot use Android header v3; custom boot-image format and fastboot boot acceptance are unknown."]
+configuration = ["The packaging script follows the shared UniXNU wrapper. Board preflight must pass before firmware/image generation."]
+procedure = ["On macOS/Linux, resolve all pins and run package --check; build only after preflight and archive validation. Review each image before any authorized RAM-only boot."]
+findings = ["No kernel, firmware, payload or boot image has been built; no fastboot boot has been attempted."]
+completion = ["Kernel/prelink and firmware build; payload/ADT are internally consistent; image format and size are accepted by the bootloader in an authorized test."]
+limits = ["Runtime memory map, UEFI platform, source resolution and boot-image compatibility remain blockers."]
+next_action = ["Finish the current device-repository checks; UEFI and image construction are later plan steps."]
+evidence = []
+
+[[area]]
+id = "diagnostics"
+status = "planned"
+components = []
+paths = ["scripts/check-elish.py", "scripts/package.sh", "unixnu.lock", "README.md"]
+inputs = ["No XNU boot output or device log has been captured. The panic-screen setting is only a configuration choice, not a verified diagnostic channel."]
+configuration = ["check-elish.py validates static identity/configuration and blocks normal builds until memory, GPT and UEFI readiness are confirmed."]
+procedure = ["Keep build output, image hashes, source revisions and any authorized boot observations with the corresponding porting record entry."]
+findings = ["The preflight has a static-only mode for host validation and a strict default mode for build gating."]
+completion = ["Every claimed milestone has a reproducible command, matching source/image revision and accessible result."]
+limits = ["The strict preflight is expected to fail until hardware and UEFI blockers are resolved; no boot result exists."]
+next_action = ["Run static preflight and porting-record checks now; add device evidence only after authorized measurements."]
+evidence = []

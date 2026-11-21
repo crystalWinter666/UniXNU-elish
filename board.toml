@@ -1,0 +1,163 @@
+# Xiaomi Pad 5 Pro Wi-Fi (elish, SM8250-AC / Snapdragon 870).
+# Identity and observations are recorded in reports/elish-device-identity.md and
+# reports/elish-hardware-inventory.md in the UniXNU checkout. Values not measured
+# on this unit are explicitly left as candidates or blocked below.
+schema_version = 2
+[board]
+example = false
+name = "elish"
+soc = "SM8250-AC"                    # LineageOS 板级 TARGET_BOARD_PLATFORM := kona；astide 内核树全部落在 sm8250 家族
+soc_source = "sm8250"                # feeds.toml 钉的 FFT-infra/UniXNU-sm8250-common
+os_profile = "ipados-17.7.11-21H461"
+description = "Xiaomi Pad 5 Pro Wi-Fi (M2105K81AC)"
+kit = "elish"
+
+[validation]
+# The preflight rejects normal builds until all hardware-critical inputs are measured.
+memory_map = "unverified"
+userdata_geometry = "unverified"
+uefi_platform = "pending"
+
+# Zero values are deliberate sentinels. They make userdata image sizing unusable
+# until GPT start/end LBAs and the logical sector size are read from this unit.
+[userdata]
+first_lba = 0
+last_lba = 0
+lba_bytes = 0
+
+[kernel]
+# Stage 1 only. No storage, display, touch, or GPU implementation is enabled here.
+defconfig = "elish_defconfig"
+# 顺序即应用顺序：arch → soc → os → device。
+config_fragments = ["arch:configs/common.config", "soc:configs/sm8250.config", "os:configs/ipados.config"]
+# 设备系列补丁必须在 os 之前：os 的 zzz-boot-progress.patch 依赖设备系列的
+# sheng-platform-power.patch 引入的 sheng_pmgr_run() 调用点。
+patch_series = ["arch:patches/xnu/series", "soc:patches/xnu/series", "device:patches/xnu/series", "os:patches/xnu/series"]
+# Confirm archive names and ordering with `unixnu status --json` after fetching the pinned sources.
+archives = [
+  "build-corecrypto-14.py",
+  "build-corecrypto-14.py --namespace",
+  "component:ArmDTPlatform",
+  "component:ArmCpu",
+  "component:SoftwareAES",
+  "build-software-aes-bindings.py",
+  "build-libpthread-kernel.py",
+  "build-link-stubs.py",
+  "build-platform-power.py",
+]
+
+[firmware]
+# elishPkg and its Resources/Configs/elish.toml are future work.
+config = "elish"
+dsc = "Platforms/Xiaomi/elishPkg/elish.dsc"
+fd = "Build/elishPkg/{target}_CLANGPDB/FV/SILICIUM_UEFI.fd"
+preflight = ["scripts/check-elish.py"]
+submodules = [
+  # The user supplied ROM has xbl.img, boot.img, vendor_boot.img and dtbo.img.
+  # No proprietary binaries are copied here; DXE extraction and hash pinning belong to UEFI integration.
+  "Common/Mu",
+  "Common/Mu_OEM_Sample",
+  "Silicium-ACPI",
+  "Silicon/Silicium/OpensslPkg/Library/OpensslLib/openssl",
+]
+patches = ["Resources/MuPatches/Gic-Spurious.patch"]
+packages = [
+  "{uefi}",
+  "{uefi}/Platforms/Xiaomi",
+  "{tree}/package",
+  "{tree}/drivers/DarwinBoot",
+  "{edk2}",
+  "{uefi}/Common/Mu",
+  "{uefi}/Common/Mu_OEM_Sample",
+  "{uefi}/Silicon/Qualcomm",
+  "{uefi}/Silicon/Silicium",
+  "{uefi}/Silicium-ACPI",
+  "{uefi}/Silicium-ACPI/Platforms/Xiaomi",
+  "{uefi}/Silicium-ACPI/Silicon/Qualcomm",
+]
+
+[firmware.defines]
+# Local overrides are provisional until reviewed against the elish platform integration.
+ENABLE_SECUREBOOT = "0"
+MEMORY_PROTECTION = "TRUE"
+SHIP_MODE = "FALSE"
+BUILDID_STRING = "elish-research"
+
+[device_tree]
+source = "device:dts/elish.dts"
+include_dirs = ["soc:dts"]
+
+[bootimg]
+dtb = "build/elish/elish.dtb"
+
+[components]
+# Stage-1 components are selected explicitly; verify their source pins and archive plan before building.
+include = ["ArmDTPlatform", "ArmCpu", "SoftwareAES", "XnuPrelink", "DarwinBoot"]
+
+[payload]
+volume = "ELISHESP"
+size_mib = 64
+loader = "firmware"
+# -1 = 停在菜单等按键；取证时不会因默认自动启动而失控。
+timeout = -1
+title = "elish：4 KiB XNU 到 panic 屏（阶段 1）"
+# No runtime DRAM map is encoded in this scaffold. Preflight blocks image builds until it is measured.
+skip_setup_tool = "scripts/seed-data-skip-setup.py"
+panic_screen = true
+kernel_args = [
+  "-v",
+  "serial=3",
+  "debug=0x14e",
+  "kt_fixed_zones=120",
+  "armcpu-diagnostics=1",
+  "sheng-pmgr=2",
+  "-no_slto_panic",
+  "ml-timeout-lock-panic-scale=40",
+]
+
+[payload.adt]
+# chip_id is confirmed by read-only Android soc_id. Memory ownership and root-volume settings
+# remain provisional until the matching ADT and runtime memory map are reviewed.
+chip_id = "356"
+owned_memory_size = "0x10000000"
+packed_data_ramdisk = true
+ipad_identity = true
+root_match_volume_uuid = "04769D26-2CA0-4825-B443-E2E5F88300F2"   # Target OS profile's OS volume UUID.
+unique_chip_id = "required"          # 平台种子不存仓库
+
+[adt]
+
+[adt.product]
+
+[adt.product.string]
+model = "J120AP"                     # iPad7,1 = j120ap，与目标 IPSW 一致
+artwork-display-gamut = "sRGB"
+
+[adt.defaults]
+
+[adt.defaults.u32]
+sleep-disabled = 1
+# 没有 Apple PMGR / SEP：报虚拟平台，AMFI 才不会等 ApplePMGRNub。
+vmm-present = 1
+
+[adt.chosen.u32]
+# SM8250 没有 CTRR，内核文本对硬件仍可写（iBoot 在 Apple SoC 上写这个）。
+kernel-ctrr-to-be-enabled = 0
+
+[adt.buttons]
+
+[adt.buttons.string]
+compatible = "buttons"
+device_type = "buttons"
+
+[adt.buttons.strings]
+button-names = ["hold", "voldown", "volup"]
+
+[adt.buttons.u32]
+home-button-type = 2
+
+[package]
+unixnu = "../UniXNU-elish"
+
+[package.defconfig]
+"ipados-17.7.11-21H461" = "elish_defconfig"

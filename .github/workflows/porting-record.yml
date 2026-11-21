@@ -1,10 +1,34 @@
 name: Device documentation
 
-on: [push, pull_request]
+on: push
 
 permissions:
   contents: read
 
 jobs:
   porting-record:
-    uses: UniXNU/UniXNU/.github/workflows/porting-record.yml@main
+    name: Porting record
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: device
+          fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          repository: UniXNU/UniXNU
+          ref: main
+          path: tools
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate structure and changed areas
+        env:
+          BASE: ${{ github.event.before }}
+        run: |
+          if [[ -z "$BASE" || "$BASE" =~ ^0+$ ]] ||
+             ! git -C device cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+            python3 tools/scripts/porting-record.py check --device device
+          else
+            python3 tools/scripts/porting-record.py check --device device --base "$BASE"
+          fi

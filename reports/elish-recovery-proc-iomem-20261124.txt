@@ -1,0 +1,114 @@
+00100000-002effff : cc_base
+00408000-00408fff : qcom,ipcc@408000
+00780000-00784fff : qfprom@780000
+00884000-00887fff : i2c@884000
+008c0000-008c1fff : qcom,qupv3_2_geni_se@8c0000
+00980000-00983fff : i2c@980000
+00984000-00987fff : i2c@984000
+0098c000-0098ffff : i2c@98c000
+009c0000-009c1fff : qcom,qupv3_0_geni_se@9c0000
+00a80000-00a83fff : i2c@a80000
+00a8c000-00a8ffff : i2c@a8c000
+00a94000-00a97fff : i2c@a94000
+00ac0000-00ac1fff : qcom,qupv3_1_geni_se@ac0000
+0188101c-0188101f : sp2soc_irq_status
+01881024-01881027 : sp2soc_irq_clr
+01881028-0188102b : sp2soc_irq_mask
+0188103c-0188103f : rmb_err
+01882014-01882017 : rmb_err_spare2
+01d84000-01d86fff : ufs_mem
+01d87000-01d87dff : phy_mem
+01d90000-01d97fff : ufs_ice
+03d00000-03d3ffff : kgsl-3d0
+03d90000-03d98fff : cc_base
+03da0000-03daffff : base
+03dc2200-03dc2207 : status-reg
+03dc2208-03dc220f : status-reg
+03dc5000-03dc5fff : base
+03dc9000-03dc9fff : base
+088e0000-088e1fff : eud_base
+088e2000-088e2003 : eud_enable_reg
+088e3000-088e310f : hsusb_phy_base
+088e4000-088e410f : hsusb_phy_base
+088e7000-088e7083 : refgen-regulator@88e7000
+088eb88c-088eb88f : pcs_clamp_enable_reg
+09095000-090952ff : lagg-base
+09200000-093cffff : llcc_base
+09600000-0964ffff : llcc_broadcast_base
+09800000-0980ffff : qdsp6ss
+09810000-0981ffff : qdsp6ss_pll
+09980000-0998ffff : cc
+0a60c100-0a60d93b : dwc3@a600000
+0a800000-0a807fff : dwc3@a800000
+  0a800000-0a807fff : dwc3@a800000
+0a80c100-0a80d93b : dwc3@a800000
+0abf0000-0abfffff : cc_base
+0ad00000-0ad0ffff : cc_base
+0af00000-0af1ffff : cc_base
+0af20000-0af2ffff : drv-0
+0c222000-0c222003 : tsens_srot_physical
+0c223000-0c223003 : tsens_srot_physical
+0c263000-0c2631fe : tsens_tm_physical
+0c264000-0c264003 : pshold-base
+0c265000-0c2651fe : tsens_tm_physical
+0c40a000-0c42ffff : cnfg
+0c440000-0c4410ff : core
+0c600000-0e5fffff : chnls
+0e600000-0e6fffff : obsrvr
+0e700000-0e79ffff : intr
+0f000000-0fffffff : pinctrl@f000000
+15000000-150fffff : base
+15182200-15182207 : status-reg
+15182208-1518220f : status-reg
+15182210-15182217 : status-reg
+15182218-1518221f : status-reg
+15182220-15182227 : status-reg
+15182228-1518222f : status-reg
+15182230-15182237 : status-reg
+15182238-1518223f : status-reg
+15182240-15182247 : status-reg
+15182248-1518224f : status-reg
+15185000-15185fff : base
+15189000-15189fff : base
+1518d000-1518dfff : base
+15191000-15191fff : base
+15195000-15195fff : base
+15199000-15199fff : base
+1519d000-1519dfff : base
+151a1000-151a1fff : base
+151a5000-151a5fff : base
+151a9000-151a9fff : base
+17c10000-17c10fff : msm-watchdog
+17c21000-17c21fff : arch_mem_timer
+18220000-1822ffff : drv-2
+18591000-18591fff : freq-domain0
+18592000-18592fff : freq-domain1
+18593000-18593fff : freq-domain2
+60300000-63ffffff : qcom,pcie@1c00000
+  60300000-604fffff : PCI Bus 0000:01
+    60300000-603fffff : 0000:01:00.0
+      60300000-603fffff : cnss
+  60500000-606fffff : PCI Bus 0000:01
+  60700000-60700fff : 0000:00:00.0
+80894000-808fffff : System RAM
+85e00000-861fffff : System RAM
+8681c000-868fffff : System RAM
+92700000-b03fffff : System RAM
+  9c000000-9e3fffff : reserved
+  a0080000-a2dfffff : Kernel code
+  a2e00000-a2ffffff : reserved
+  a3000000-a3e47fff : Kernel data
+  aea9b000-aeb69fff : reserved
+  aec9c000-afffefff : reserved
+  b0000000-b03fffff : reserved
+b1400000-bbafffff : System RAM
+c0000000-ffbfffff : System RAM
+  ea000000-ffbfffff : reserved
+ffc20000-27fffffff : System RAM
+  275d80000-276bfffff : reserved
+  276c3a000-27ebfffff : reserved
+  27ec67000-27ec67fff : reserved
+  27ec68000-27ed37fff : reserved
+  27ed3a000-27ed3afff : reserved
+  27ed3b000-27ed3bfff : reserved
+  27ed3c000-27fffffff : reserved

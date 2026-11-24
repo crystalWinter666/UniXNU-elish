@@ -2,7 +2,6 @@ name: package
 
 # 设备打包 action（docs/porting/packaging.md）。平台种子来自仓库 secret UNIXNU_UNIQUE_CHIP_ID，
 # 烧进镜像里，所以一次运行的产物只属于一台设备：下载后删除该运行。在设备仓库的 fork 里运行。
-# TODO(elish): uefi-elish 平台包建立后，把下方 REPLACE/uefi-elish 换成实际仓库。
 
 on:
   workflow_dispatch:
@@ -32,13 +31,17 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: UniXNU/UniXNU
+          ref: 8542980d02b4d2cc5c32ee3542de1760b2562aac
           path: UniXNU
           submodules: recursive
       - uses: actions/checkout@v4
         with:
-          repository: REPLACE/uefi-elish   # this board's firmware checkout (TODO: create it)
+          repository: crystalWinter666/uefi-elish
+          ref: f03839d31a3f07e9e4b032fcf850ac0dfb9961a0
           path: uefi-elish
           submodules: recursive   # the firmware volume builds from the checkout's submodules
+      - name: elish build support
+        run: git -C UniXNU apply ../device/patches/unixnu-build-support.patch
       - name: tools
         run: |
           brew install dtc llvm lld cmake mtools blacktop/tap/ipsw

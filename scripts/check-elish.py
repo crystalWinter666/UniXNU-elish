@@ -69,8 +69,8 @@ def main():
     memory_state = validation.get("memory_map", "unverified")
     userdata_state = validation.get("userdata_geometry", "unverified")
     uefi_state = validation.get("uefi_platform", "pending")
-    if memory_state != "verified":
-        blockers.append("runtime DRAM banks and reserved ranges are not verified")
+    if memory_state not in ("verified", "runtime-managed"):
+        blockers.append("measured DRAM banks and reserved ranges are not reconciled with UEFI/XNU ownership")
     if userdata_state != "verified":
         blockers.append("userdata GPT LBAs and logical sector size are not verified")
     if uefi_state != "ready":
@@ -86,10 +86,27 @@ def main():
     dts_path = device / "dts/elish.dts"
     if dts_path.is_file():
         dts = dts_path.read_text(encoding="utf-8")
-        if memory_state != "verified" and 'device_type = "memory"' in dts:
-            errors.append("DTS must not publish an unverified DRAM range")
-        if memory_state == "verified" and 'device_type = "memory"' not in dts:
-            errors.append("verified DRAM state requires a memory node in the DTS")
+        has_memory = 'device_type = "memory"' in dts
+        memory_ready = memory_state in ("verified", "runtime-managed")
+        if memory_ready and not has_memory:
+            errors.append("ready memory handoff requires a memory node in the DTS")
+        if not memory_ready and has_memory:
+            errors.append("DTS must not publish allocatable memory before its handoff is configured")
+        if has_memory and memory_ready:
+            normalized_dts = " ".join(dts.split())
+            measured_banks = (
+                "reg = <0x00000000 0x80000000 0x00000000 0x3bb00000 "
+                "0x00000000 0xc0000000 0x00000001 0xc0000000>;"
+            )
+            payload_size = board.get("payload", {}).get("dram_size")
+            excluded_slots = board.get("payload", {}).get("adt", {}).get("owned_memory_excluded_ranges", 0)
+            series = (device / "patches/xnu/series").read_text(encoding="utf-8")
+            if measured_banks not in normalized_dts or payload_size != "0x200000000":
+                errors.append("the elish DTS and payload.dram_size must match both measured DRAM banks")
+            if not isinstance(excluded_slots, int) or not 1 <= excluded_slots <= 256:
+                errors.append("the elish memory handoff requires 1 to 256 XNU excluded-range slots")
+            if "elish-memory-excluded-ranges.patch" not in series:
+                errors.append("the elish memory handoff requires its XNU excluded-range consumer patch")
 
     config_path = device / "configs" / kernel.get("defconfig", "")
     if config_path.is_file():
@@ -115,13 +132,29 @@ def main():
         return 2
 
     print("elish static scaffold checks passed")
+    if memory_state == "runtime-managed":
+        print("RUNTIME: DarwinBoot resolves usable memory from the UEFI map; device handoff remains unverified")
     for blocker in blockers:
         print(f"BLOCKED: {blocker}")
     if args.static_only:
         return 0
-    if blockers:
+    if blockers and os.environ.get("UNIXNU_BUILD_ONLY_FIRMWARE") != "1":
         print("elish preflight: refusing firmware/image build until blockers are resolved", file=sys.stderr)
         return 1
+
+    if blockers:
+        if os.environ.get("UNIXNU_BUILD_ONLY_FIRMWARE") == "1":
+            uefi_value = os.environ.get("UNIXNU_UEFI")
+            if not uefi_value:
+                print("elish preflight: UNIXNU_UEFI is not set", file=sys.stderr)
+                return 2
+            firmware = board.get("firmware", {})
+            for relative in (firmware.get("dsc", ""), f"Resources/Configs/{firmware.get('config', '')}.toml"):
+                if not relative or not (Path(uefi_value) / relative).is_file():
+                    print(f"elish preflight: required firmware source is missing: {relative}", file=sys.stderr)
+                    return 2
+        print("elish preflight: source firmware build only; payload/image prerequisites remain blocked")
+        return 0
 
     uefi_value = os.environ.get("UNIXNU_UEFI")
     if not uefi_value:

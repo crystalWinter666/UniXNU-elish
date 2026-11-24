@@ -7,3 +7,5 @@ void native_legacy_display_probe(void);
 void native_legacy_display_probe(void)
 {
 }
+
+void (*arm64_platform_sleep_hook)(int) = 0;

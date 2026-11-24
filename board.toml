@@ -1,7 +1,8 @@
 # Xiaomi Pad 5 Pro Wi-Fi (elish, SM8250-AC / Snapdragon 870).
 # Identity and observations are recorded in reports/elish-device-identity.md and
-# reports/elish-hardware-inventory.md in the UniXNU checkout. Values not measured
-# on this unit are explicitly left as candidates or blocked below.
+# reports/elish-hardware-inventory.md in the UniXNU checkout. Live hardware
+# measurements collected over root ADB are recorded in reports/elish-live-hardware-20261123.md.
+# Values not measured on this unit remain explicitly blocked below.
 schema_version = 2
 [board]
 example = false
@@ -13,17 +14,18 @@ description = "Xiaomi Pad 5 Pro Wi-Fi (M2105K81AC)"
 kit = "elish"
 
 [validation]
-# The preflight rejects normal builds until all hardware-critical inputs are measured.
-memory_map = "unverified"
-userdata_geometry = "unverified"
-uefi_platform = "pending"
+# The measured DRAM banks and dynamic DarwinBoot/XNU excluded-range handoff are
+# configured. Runtime UEFI ownership still needs device validation.
+memory_map = "runtime-managed"
+userdata_geometry = "verified"
+uefi_platform = "ready"
 
-# Zero values are deliberate sentinels. They make userdata image sizing unusable
-# until GPT start/end LBAs and the logical sector size are read from this unit.
+# Read from /dev/block/sda GPT over root ADB. The 4 KiB logical block size and
+# both GPT copies were validated against their CRCs on 2026-11-23.
 [userdata]
-first_lba = 0
-last_lba = 0
-lba_bytes = 0
+first_lba = 6619136
+last_lba = 61870314
+lba_bytes = 4096
 
 [kernel]
 # Stage 1 only. No storage, display, touch, or GPU implementation is enabled here.
@@ -41,13 +43,14 @@ archives = [
   "component:ArmCpu",
   "component:SoftwareAES",
   "build-software-aes-bindings.py",
+  "build-mockfs-fixture.py",
   "build-libpthread-kernel.py",
   "build-link-stubs.py",
   "build-platform-power.py",
 ]
 
 [firmware]
-# elishPkg and its Resources/Configs/elish.toml are future work.
+# The elish package host-builds; runtime memory-map ownership remains unverified.
 config = "elish"
 dsc = "Platforms/Xiaomi/elishPkg/elish.dsc"
 fd = "Build/elishPkg/{target}_CLANGPDB/FV/SILICIUM_UEFI.fd"
@@ -79,6 +82,10 @@ packages = [
 [firmware.defines]
 # Local overrides are provisional until reviewed against the elish platform integration.
 ENABLE_SECUREBOOT = "0"
+# The boot path obtains its memory map in DarwinBoot.
+ELISH_MEMORY_MAP_PROBE = "FALSE"
+# DEBUG firmware captures logs in the Android ramoops console.
+ELISH_RAMOOPS_LOG = "TRUE"
 MEMORY_PROTECTION = "TRUE"
 SHIP_MODE = "FALSE"
 BUILDID_STRING = "elish-research"
@@ -88,7 +95,8 @@ source = "device:dts/elish.dts"
 include_dirs = ["soc:dts"]
 
 [bootimg]
-dtb = "build/elish/elish.dtb"
+# The payload step compiles the measured hardware DTS to this sibling build output.
+dtb = "../device-tree/hardware.dtb"
 
 [components]
 # Stage-1 components are selected explicitly; verify their source pins and archive plan before building.
@@ -98,10 +106,15 @@ include = ["ArmDTPlatform", "ArmCpu", "SoftwareAES", "XnuPrelink", "DarwinBoot"]
 volume = "ELISHESP"
 size_mib = 64
 loader = "firmware"
-# -1 = 停在菜单等按键；取证时不会因默认自动启动而失控。
-timeout = -1
+tools = true
+# The DTS exposes the measured DRAM envelope. DarwinBoot derives usable pages
+# from the live UEFI map and writes exclusions for XNU at handoff.
+dram_size = "0x200000000"
+# Automatically start the only XNU entry after the UEFI menu countdown.
+timeout = 3
 title = "elish：4 KiB XNU 到 panic 屏（阶段 1）"
-# No runtime DRAM map is encoded in this scaffold. Preflight blocks image builds until it is measured.
+# DarwinBoot uses the live UEFI map to select usable memory and emits excluded ranges
+# for the XNU owner. The HOB screenshots are partial evidence, not the final UEFI map.
 skip_setup_tool = "scripts/seed-data-skip-setup.py"
 panic_screen = true
 kernel_args = [
@@ -110,7 +123,6 @@ kernel_args = [
   "debug=0x14e",
   "kt_fixed_zones=120",
   "armcpu-diagnostics=1",
-  "sheng-pmgr=2",
   "-no_slto_panic",
   "ml-timeout-lock-panic-scale=40",
 ]
@@ -120,6 +132,7 @@ kernel_args = [
 # remain provisional until the matching ADT and runtime memory map are reviewed.
 chip_id = "356"
 owned_memory_size = "0x10000000"
+owned_memory_excluded_ranges = 16
 packed_data_ramdisk = true
 ipad_identity = true
 root_match_volume_uuid = "04769D26-2CA0-4825-B443-E2E5F88300F2"   # Target OS profile's OS volume UUID.
@@ -157,7 +170,7 @@ button-names = ["hold", "voldown", "volup"]
 home-button-type = 2
 
 [package]
-unixnu = "../UniXNU-elish"
+unixnu = "../UniXNU"
 
 [package.defconfig]
 "ipados-17.7.11-21H461" = "elish_defconfig"

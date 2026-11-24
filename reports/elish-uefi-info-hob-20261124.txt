@@ -1,0 +1,247 @@
+RamLog: 0xB0000000, resets warm into fastboot, PON 0x00000000
+
+Project Silicium for Xiaomi Xiaomi Pad 5 Pro Wi-Fi
+Firmware Version 4.0 Build at 13:41:31 on Nov  1 2026
+
+MMU In
+MMU: 46 regions
+MMU: map valid
+MMU: HOBs built, enabling
+MMU: enabled
+SEC: memory HOBs done
+SEC: platform HOBs done (Success)
+SEC: HOB list ok, 98 entries
+SEC: constructor debug
+SEC: constructor guided-section
+SEC: constructor mmu
+SEC: constructor lzma
+SEC: constructors done
+SEC: HOB list ok, 102 entries
+SEC: FV decompressed (Success)
+SEC: loading DXE core
+Loading DxeCore at 0x009B4EB000 EntryPoint=0x009B4EC2F4
+CoreInitializeMemoryServices:
+  BaseAddress - 0x98902000 Length - 0x2BE9000 MinimalMemorySizeNeeded - 0x1D2000
+AllocateMemoryTypeInformationBins: Allocated 0x9B328000 - 0x9B4E9FFF for memory bins
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9B514D98
+ProtectUefiImage - 0x9B514D98
+  - 0x000000009B4EB000 - 0x0000000000030000
+InstallProtocolInterface: 434F695C-EF26-4A12-9EBA-DDEF0097497C 9B5146F0
+DxeCoreAdvancedLoggerLibConstructor Initialized. mLoggerInfo = 9AF22000, Container=9B5146F0
+ProcessProtocolRegistration: Registering for 27CFAC87-46CC-11D4-9A38-0090273FC14D
+DxeMemoryProtectionHobLibConstructor - Unable to fetch memory protection HOB. Zero-ing memory protection settings
+DxeMain: MemoryBaseAddress=0x98902000 MemoryLength=0x2BE9000
+HOBLIST address in DXE = 0x9B322018
+Memory Allocation 0x00000004 0x805D0000 - 0x805EFFFF
+Memory Allocation 0x00000000 0x80600000 - 0x806FFFFF
+Memory Allocation 0x00000004 0x80700000 - 0x807FFFFF
+Memory Allocation 0x00000000 0x80884000 - 0x80893FFF
+Memory Allocation 0x00000007 0x98900000 - 0x9BBFFFFF
+Memory Allocation 0x00000004 0x9BC00000 - 0x9BFFFFFF
+Memory Allocation 0x00000004 0x9F800000 - 0x9F9FFFFF
+Memory Allocation 0x00000000 0x9FA00000 - 0x9FBFFFFF
+Memory Allocation 0x00000004 0x9FC00000 - 0x9FEFFFFF
+Memory Allocation 0x00000004 0x9FF00000 - 0x9FF8BFFF
+Memory Allocation 0x00000004 0x9FF8C000 - 0x9FF8CFFF
+Memory Allocation 0x00000004 0x9FF8D000 - 0x9FF8FFFF
+Memory Allocation 0x00000004 0x9FF90000 - 0x9FFCFFFF
+Memory Allocation 0x00000006 0x9FFF7000 - 0x9FFFEFFF
+Memory Allocation 0x00000006 0x9FFFF000 - 0x9FFFFFFF
+Memory Allocation 0x00000000 0xA0000000 - 0xAFFFFFFF
+Memory Allocation 0x00000004 0x9BBFF000 - 0x9BBFFFFF
+Memory Allocation 0x00000004 0x9BBFE000 - 0x9BBFEFFF
+Memory Allocation 0x00000004 0x9BBFD000 - 0x9BBFDFFF
+Memory Allocation 0x00000004 0x9BBFC000 - 0x9BBFCFFF
+Memory Allocation 0x00000004 0x9BBFB000 - 0x9BBFBFFF
+Memory Allocation 0x00000004 0x9BBFA000 - 0x9BBFAFFF
+Memory Allocation 0x00000004 0x9BBF9000 - 0x9BBF9FFF
+Memory Allocation 0x00000004 0x9BBF8000 - 0x9BBF8FFF
+Memory Allocation 0x00000004 0x9BBF7000 - 0x9BBF7FFF
+Memory Allocation 0x00000004 0x9BBF6000 - 0x9BBF6FFF
+Memory Allocation 0x00000004 0x9BBF5000 - 0x9BBF5FFF
+Memory Allocation 0x00000004 0x9BBF4000 - 0x9BBF4FFF
+Memory Allocation 0x00000004 0x9BBF3000 - 0x9BBF3FFF
+Memory Allocation 0x00000004 0x9BBF2000 - 0x9BBF2FFF
+Memory Allocation 0x00000004 0x9BBF1000 - 0x9BBF1FFF
+Memory Allocation 0x00000004 0x9BBF0000 - 0x9BBF0FFF
+Memory Allocation 0x00000004 0x9BBEF000 - 0x9BBEFFFF
+Memory Allocation 0x00000004 0x9BBEE000 - 0x9BBEEFFF
+Memory Allocation 0x00000004 0x9BBED000 - 0x9BBEDFFF
+Memory Allocation 0x00000004 0x9BBEC000 - 0x9BBECFFF
+Memory Allocation 0x00000004 0x9BBEB000 - 0x9BBEBFFF
+Memory Allocation 0x00000004 0x9BBEA000 - 0x9BBEAFFF
+Memory Allocation 0x00000004 0x9BBE9000 - 0x9BBE9FFF
+Memory Allocation 0x00000004 0x9BBE8000 - 0x9BBE8FFF
+Memory Allocation 0x00000004 0x9BBE7000 - 0x9BBE7FFF
+Memory Allocation 0x00000004 0x9BBE6000 - 0x9BBE6FFF
+Memory Allocation 0x00000004 0x9BBE5000 - 0x9BBE5FFF
+Memory Allocation 0x00000004 0x9BBE4000 - 0x9BBE4FFF
+Memory Allocation 0x00000004 0x9FF90000 - 0x9FFCFFFF
+Memory Allocation 0x00000004 0x9BBD4000 - 0x9BBE3FFF
+Memory Allocation 0x00000004 0x9B877000 - 0x9BBD3FFF
+Memory Allocation 0x00000004 0x9B51B000 - 0x9B876FFF
+Memory Allocation 0x00000003 0x9B4EB000 - 0x9B51AFFF
+Memory Allocation 0x00000003 0x9B4EB000 - 0x9B51AFFF
+FV Hob            0x9FC00000 - 0x9FEFFFFF
+FV Hob            0x9B51B000 - 0x9B875FFF
+FV2 Hob           0x9B51B000 - 0x9B875FFF
+                  00000000-0000-0000-0000-000000000000 - 9E21FD93-9C72-4C15-8C4B-E77F1DB2D792
+FV3 Hob           0x9B51B000 - 0x9B875FFF - 0x0 - 0x1
+                  00000000-0000-0000-0000-000000000000 - 9E21FD93-9C72-4C15-8C4B-E77F1DB2D792
+InstallProtocolInterface: D8117CFE-94A6-11D4-9A3A-0090273FC14D 9B514350
+InstallProtocolInterface: 8F644FA9-E850-4DB1-9CE2-0B44698E8DA4 9AF1E8B0
+InstallProtocolInterface: 09576E91-6D3F-11D2-8E39-00A0C969723B 9AF1E998
+InstallProtocolInterface: 8F644FA9-E850-4DB1-9CE2-0B44698E8DA4 9AF1E2B0
+InstallProtocolInterface: 09576E91-6D3F-11D2-8E39-00A0C969723B 9AF1E618
+InstallProtocolInterface: 220E73B6-6BDB-4413-8405-B974B108619A 9AF15B30
+InstallProtocolInterface: 220E73B6-6BDB-4413-8405-B974B108619A 9AF150B0
+Loading driver 80CF7257-87AB-47F9-A3FE-D50B76D89541
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AD5F040
+Loading driver at 0x0009AD54000 EntryPoint=0x0009AD55050 PcdDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AD5FE18
+ProtectUefiImage - 0x9AD5F040
+  - 0x000000009AD54000 - 0x000000000000B000
+InstallProtocolInterface: 11B34006-D85B-4D0A-A290-D5A571310EF7 9AD5C1B0
+InstallProtocolInterface: 13A3F0F6-264A-3EF0-F2E0-DEC512342F34 9AD5C120
+InstallProtocolInterface: 5BE40F57-FA68-4610-BBBF-E9C5FCDAD365 9AD5C100
+InstallProtocolInterface: FD0F4478-0EFD-461D-BA2D-E58C45FD5F5E 9AD5C030
+Loading driver 90A49AFD-422F-08AE-9611-E788D3804845
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AD660C0
+Loading driver at 0x0009B3AE000 EntryPoint=0x0009B3AF000 EnvDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AD66D98
+ProtectUefiImage - 0x9AD660C0
+  - 0x000000009B3AE000 - 0x0000000000010000
+InstallProtocolInterface: 5172FFB5-4253-7D51-C641-A701F973103C 9B3BB1E0
+InstallProtocolInterface: F57F73ED-0AFC-4723-9374-2CEBC0198EF9 9B3BB218
+InstallProtocolInterface: DC241E53-498B-3B59-AD17-C8B29E6B36A8 9B3BB208
+Loading driver D93CE3D8-A7EB-4730-8C8E-CC466A9ECC3C
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AD61040
+Loading driver at 0x0009B340000 EntryPoint=0x0009B350104 ReportStatusCodeRouterRuntimeDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AD61E98
+ProtectUefiImage - 0x9AD61040
+  - 0x000000009B340000 - 0x0000000000060000
+InstallProtocolInterface: 86212936-0E76-41C8-A03A-2AF2FC1C39E2 9B370018
+InstallProtocolInterface: D2B2B828-0826-48A7-B3DF-983C006024F0 9B370010
+Loading driver B601F8C4-43B7-4784-95B1-F4226CB40CEE
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AD613C0
+Loading driver at 0x0009ACE0000 EntryPoint=0x0009ACF0050 RuntimeDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AD61718
+ProtectUefiImage - 0x9AD613C0
+  - 0x000000009ACE0000 - 0x0000000000060000
+InstallProtocolInterface: B7DFB4E1-052F-449F-87BE-9818FC91B733 9AD10D20
+Loading driver B8D9777E-D72A-451F-9BDB-BAFB52A68415
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AD640C0
+Loading driver at 0x0009ACC1000 EntryPoint=0x0009ACC21AC ArmCpuDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AD64D18
+ProtectUefiImage - 0x9AD640C0
+  - 0x000000009ACC1000 - 0x0000000000011000
+DxeMemoryProtectionHobLibConstructor - Unable to fetch memory protection HOB. Zero-ing memory protection settings
+InstallProtocolInterface: 26BACCB1-6F42-11D4-BCE7-0080C73C8881 9ACCDDC0
+---Currently Protected Images---
+---Final Bitmap---
+Bitmap: 1111111111111111111111111111111111111111111111111111111111111111
+---Memory Map with Populated Access Attributes---
+Memory Range: 0x400000 - 0x500000. Type:11, Attributes: 0x0
+Memory Range: 0x780000 - 0x787000. Type:11, Attributes: 0x0
+Memory Range: 0x790000 - 0x7A0000. Type:11, Attributes: 0x0
+Memory Range: 0x800000 - 0x8D0000. Type:11, Attributes: 0x0
+Memory Range: 0x900000 - 0x9D0000. Type:11, Attributes: 0x0
+Memory Range: 0xA00000 - 0xAD0000. Type:11, Attributes: 0x0
+Memory Range: 0x1DC0000 - 0x1E00000. Type:11, Attributes: 0x0
+Memory Range: 0x1FC0000 - 0x1FF0000. Type:11, Attributes: 0x0
+Memory Range: 0x2C7D000 - 0x2C7F000. Type:11, Attributes: 0x0
+Memory Range: 0x2C90000 - 0x2C9A000. Type:11, Attributes: 0x0
+Memory Range: 0x5A00000 - 0x5AD0000. Type:11, Attributes: 0x0
+Memory Range: 0x8800000 - 0x8A00000. Type:11, Attributes: 0x0
+Memory Range: 0xA600000 - 0xA71B000. Type:11, Attributes: 0x0
+Memory Range: 0xA720000 - 0xA730000. Type:11, Attributes: 0x0
+Memory Range: 0xA800000 - 0xA91B000. Type:11, Attributes: 0x0
+Memory Range: 0xB000000 - 0xF000000. Type:11, Attributes: 0x0
+Memory Range: 0xF100000 - 0xF400000. Type:11, Attributes: 0x0
+Memory Range: 0xF500000 - 0xF800000. Type:11, Attributes: 0x0
+Memory Range: 0xF900000 - 0xFC00000. Type:11, Attributes: 0x0
+Memory Range: 0x146BF000 - 0x146C0000. Type:11, Attributes: 0x0
+Memory Range: 0x15000000 - 0x150D0000. Type:11, Attributes: 0x0
+Memory Range: 0x17800000 - 0x25181000. Type:11, Attributes: 0x0
+Memory Range: 0x805D0000 - 0x805F0000. Type:4, Attributes: 0x0
+Memory Range: 0x80600000 - 0x80700000. Type:0, Attributes: 0x0
+Memory Range: 0x80700000 - 0x80800000. Type:4, Attributes: 0x0
+Memory Range: 0x80860000 - 0x80880000. Type:0, Attributes: 0x0
+Memory Range: 0x80884000 - 0x80894000. Type:0, Attributes: 0x0
+Memory Range: 0x80900000 - 0x80B00000. Type:0, Attributes: 0x0
+Memory Range: 0x82400000 - 0x85E00000. Type:0, Attributes: 0x0
+Memory Range: 0x86000000 - 0x93200000. Type:0, Attributes: 0x0
+Memory Range: 0x98900000 - 0x9AC00000. Type:7, Attributes: 0x0
+Memory Range: 0x9AC00000 - 0x9AC01000. Type:4, Attributes: 0x0
+Memory Range: 0x9AC01000 - 0x9ACC1000. Type:7, Attributes: 0x0
+Memory Range: 0x9ACC1000 - 0x9ACD2000. Type:3, Attributes: 0x0
+Memory Range: 0x9ACD2000 - 0x9ACDE000. Type:7, Attributes: 0x0
+Memory Range: 0x9ACDE000 - 0x9ACE0000. Type:5, Attributes: 0x0
+Memory Range: 0x9ACE0000 - 0x9AD40000. Type:5, Attributes: 0x0
+Memory Range: 0x9AD40000 - 0x9AD4E000. Type:5, Attributes: 0x0
+Memory Range: 0x9AD4E000 - 0x9AD52000. Type:7, Attributes: 0x0
+Memory Range: 0x9AD52000 - 0x9AD54000. Type:4, Attributes: 0x0
+Memory Range: 0x9AD54000 - 0x9AD5F000. Type:3, Attributes: 0x0
+Memory Range: 0x9AD5F000 - 0x9AD60000. Type:4, Attributes: 0x0
+Memory Range: 0x9AD60000 - 0x9AD61000. Type:7, Attributes: 0x0
+Memory Range: 0x9AD61000 - 0x9AD63000. Type:4, Attributes: 0x0
+Memory Range: 0x9AD63000 - 0x9AD64000. Type:7, Attributes: 0x0
+Memory Range: 0x9AD64000 - 0x9AF22000. Type:4, Attributes: 0x0
+Memory Range: 0x9AF22000 - 0x9B322000. Type:0, Attributes: 0x0
+Memory Range: 0x9B322000 - 0x9B328000. Type:4, Attributes: 0x0
+Memory Range: 0x9B328000 - 0x9B340000. Type:5, Attributes: 0x0
+Memory Range: 0x9B340000 - 0x9B3A0000. Type:5, Attributes: 0x0
+Memory Range: 0x9B3A0000 - 0x9B3AE000. Type:5, Attributes: 0x0
+Memory Range: 0x9B3AE000 - 0x9B3BE000. Type:5, Attributes: 0x0
+Memory Range: 0x9B3BE000 - 0x9B4EA000. Type:6, Attributes: 0x0
+Memory Range: 0x9B4EA000 - 0x9B4EB000. Type:4, Attributes: 0x0
+Memory Range: 0x9B4EB000 - 0x9B51B000. Type:3, Attributes: 0x0
+Memory Range: 0x9B51B000 - 0x9C000000. Type:4, Attributes: 0x0
+Memory Range: 0x9C000000 - 0x9E400000. Type:0, Attributes: 0x0
+Memory Range: 0x9F800000 - 0x9FA00000. Type:4, Attributes: 0x0
+Memory Range: 0x9FA00000 - 0x9FC00000. Type:0, Attributes: 0x0
+Memory Range: 0x9FC00000 - 0x9FFD0000. Type:4, Attributes: 0x0
+Memory Range: 0x9FFF7000 - 0xA0000000. Type:6, Attributes: 0x0
+Memory Range: 0xA0000000 - 0xB0000000. Type:0, Attributes: 0x0
+Memory Range: 0xB0000000 - 0xB0400000. Type:0, Attributes: 0x0
+---------------------------------------
+InitializePageAttributesForMemoryProtectionPolicy: applying strict permissions to active memory regions
+Loading driver DE371F7C-DEC4-4D21-ADF1-593ABCC15882
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AD63040
+Loading driver at 0x0009ACD4000 EntryPoint=0x0009ACD5050 ArmGicDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AD63D98
+ProtectUefiImage - 0x9AD63040
+  - 0x000000009ACD4000 - 0x000000000000A000
+InstallProtocolInterface: 2890B3EA-053D-1643-AD0C-D64808DA3FF1 9ACDB078
+InstallProtocolInterface: 32898322-2DA1-474A-BAAA-F3F7CF569470 9ACDB100
+Loading driver 4C6E0267-C77D-410D-8100-1495911A989D
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AD63340
+Loading driver at 0x0009ACBA000 EntryPoint=0x0009ACBB050 MetronomeDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AD63618
+ProtectUefiImage - 0x9AD63340
+  - 0x000000009ACBA000 - 0x0000000000007000
+InstallProtocolInterface: 26BACCB2-6F42-11D4-BCE7-0080C73C8881 9ACBE000
+Loading driver 49EA041E-6752-42CA-B0B1-7344FE2546B7
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AD60C40
+Loading driver at 0x0009ACB3000 EntryPoint=0x0009ACB4050 ArmTimerDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AD60B18
+ProtectUefiImage - 0x9AD60C40
+  - 0x000000009ACB3000 - 0x0000000000007000
+InstallProtocolInterface: 26BACCB3-6F42-11D4-BCE7-0080C73C8881 9ACB7048
+Loading driver F541D663-4A48-40AA-AABF-FF158CCAE34C
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AD51040
+Loading driver at 0x0009AC9E000 EntryPoint=0x0009AC9F000 SmemDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AD60518
+ProtectUefiImage - 0x9AD51040
+  - 0x000000009AC9E000 - 0x000000000000A000
+InstallProtocolInterface: F4E5C7D0-D239-47CB-AACD-7F66EF763238 9ACA6078
+Loading driver 51CCF399-4FDF-4E55-A45B-E123F84D456A
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AD51340
+Loading driver at 0x0009AC93000 EntryPoint=0x0009AC94050 ConPlatformDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AD51B18
+ProtectUefiImage - 0x9AD51340
+  - 0x000000009AC93000 - 0x000000000000B000
+
+ASSERT_EFI_ERROR (Status = Not Found)
+ASSERT [ConPlatformDxe] UefiHiiServicesLib.c(82): !(((RETURN_STATUS)(Status)) >= 0x8000000000000000ULL)
+RamLog: restarting into fastboot, PON 0x00000000 (warm)

@@ -1,0 +1,295 @@
+diff --git a/docs/concepts/boot-chain.md b/docs/concepts/boot-chain.md
+index 301a860..60ebcca 100644
+--- a/docs/concepts/boot-chain.md
++++ b/docs/concepts/boot-chain.md
+@@ -67,7 +67,7 @@ The loader receives the tree, the ramdisk, the boot arguments and any staged kex
+ DarwinBoot validates and loads the kernel:
+ 
+ 1. Read `kernel.macho` from the entry directory.
+-2. Parse the Mach-O header. It requires `MH_MAGIC_64`, `CPU_TYPE_ARM64`, `MH_EXECUTE`, one `LC_MAIN` and at least one `LC_SEGMENT_64`.
++2. Parse the Mach-O header. It accepts arm64 and arm64e `MH_EXECUTE` kernels and indexed `MH_FILESET` collections, requires one `LC_UNIXTHREAD` command carrying an ARM thread state, and requires at least one `LC_SEGMENT_64`.
+ 3. Check that the entry point lies in an executable segment.
+ 4. Check that every segment is page aligned, non-overlapping and within the 256 MiB window.
+ 5. Read `kernel.macho.adt`.
+diff --git a/docs/zh/concepts/boot-chain.md b/docs/zh/concepts/boot-chain.md
+index 5e30918..58d2a48 100644
+--- a/docs/zh/concepts/boot-chain.md
++++ b/docs/zh/concepts/boot-chain.md
+@@ -67,7 +67,7 @@ UniXNU 为菜单项准备设备树：
+ DarwinBoot 校验并加载内核：
+ 
+ 1. 从菜单项目录读取 `kernel.macho`。
+-2. 解析 Mach-O header，要求 `MH_MAGIC_64`、`CPU_TYPE_ARM64`、`MH_EXECUTE`、一个 `LC_MAIN` 和至少一个 `LC_SEGMENT_64`。
++2. 解析 Mach-O header。支持 arm64/arm64e `MH_EXECUTE` 内核和带索引的 `MH_FILESET` 集合，要求一个携带 ARM thread state 的 `LC_UNIXTHREAD` 命令，以及至少一个 `LC_SEGMENT_64`。
+ 3. 检查入口位于可执行段。
+ 4. 检查每个段页对齐、不重叠并位于 256 MiB 窗口内。
+ 5. 读取 `kernel.macho.adt`。
+diff --git a/scripts/unixnu/bootimg.py b/scripts/unixnu/bootimg.py
+index 558ca5e..701c11e 100644
+--- a/scripts/unixnu/bootimg.py
++++ b/scripts/unixnu/bootimg.py
+@@ -18,7 +18,8 @@ from .config import load_toml
+ from . import ramdisk as ramdisk_codec
+ from .util import Error, log, run, sha256_file, tool
+ 
+-DEFAULTS = {'header_version': 0, 'base': 0, 'kernel_offset': 0x8000, 'tags_offset': 0x1e00000, 'pagesize': 4096}
++DEFAULTS = {'header_version': 0, 'base': 0, 'kernel_offset': 0x8000, 'tags_offset': 0x1e00000, 'pagesize': 4096,
++            'kernel_compression': 'gzip', 'append_dtb': True}
+ MKBOOTIMG_FLAGS = ('base', 'kernel_offset', 'tags_offset', 'pagesize', 'header_version', 'os_version',
+                    'os_patch_level', 'ramdisk_offset', 'second_offset', 'cmdline')
+ 
+@@ -65,8 +66,14 @@ def settings(ctx, uefi):
+     fw = ctx.board.get('firmware', {})
+     config = load_toml(uefi / 'Resources/Configs' / f'{fw["config"]}.toml') if fw.get('config') else {}
+     values = dict(DEFAULTS)
++    values.update(config.get('boot_image_kernel', {}))
+     values.update(config.get('boot_image', {}))
+     values.update(ctx.board.get('bootimg', {}).get('image', {}))
++    values['kernel_compression'] = str(values['kernel_compression']).lower()
++    if values['kernel_compression'] not in ('gzip', 'none'):
++        raise Error(f'unsupported kernel_compression: {values["kernel_compression"]}')
++    if not isinstance(values['append_dtb'], bool):
++        raise Error('append_dtb must be a boolean')
+     fd = config.get('uefi_fd', {})
+     return values, fd.get('base'), fd.get('size'), config.get('boot_shim', {}).get('requires_kernel_header', True), config
+ 
+@@ -103,15 +110,14 @@ def build(ctx, uefi, fd, dtb, ramdisk=None, output=None):
+             if tree[:4] != b'\xd0\x0d\xfe\xed' or struct.unpack_from('>I', tree, 4)[0] != len(tree):
+                 raise Error('invalid compiled device tree')
+         combined = shim + firmware
+-        # [bootimg.image] kernel_compression selects the kernel encoding. The
+-        # default keeps the gzip convention; "none" writes the uncompressed
+-        # BootShim and firmware blob, which is useful when a vendor ABL is
+-        # suspected of mishandling the compressed stream.
+-        compression = str(image.get('kernel_compression', 'gzip')).lower()
+-        if compression not in ('gzip', 'none'):
+-            raise Error(f'unsupported kernel_compression: {compression}')
+-        kernel = (gzip.compress(combined, mtime=0) if compression == 'gzip' else combined) + tree
+-        kernel_path = scratch / (('Image.gz-dtb' if compression == 'gzip' else 'Image-dtb'))
++        compression = image.get('kernel_compression', 'gzip')
++        append_dtb = image.get('append_dtb', True)
++        appended_tree = tree if append_dtb else b''
++        kernel = (gzip.compress(combined, mtime=0) if compression == 'gzip' else combined) + appended_tree
++        kernel_name = 'Image.gz' if compression == 'gzip' else 'Image'
++        if append_dtb:
++            kernel_name += '-dtb'
++        kernel_path = scratch / kernel_name
+         kernel_path.write_bytes(kernel)
+         if ramdisk:
+             ramdisk_path = Path(ramdisk)
+@@ -140,7 +146,7 @@ def build(ctx, uefi, fd, dtb, ramdisk=None, output=None):
+         limit = ctx.board.get('bootimg', {}).get('max_image_bytes')
+         if limit is not None and (not isinstance(limit, int) or limit <= 0 or candidate.stat().st_size > limit):
+             raise Error(f'boot image is {candidate.stat().st_size} bytes, exceeding the qualified limit {limit}')
+-        report = verify(candidate, combined, tree, ramdisk_path, image, compression)
++        report = verify(candidate, combined, tree, ramdisk_path, image, compression, append_dtb)
+         report.update(ramdisk_encoding=encoding, ramdisk_decoded_bytes=decoded_size)
+         # Publish only the fully verified image; a failed repack leaves the previous image intact.
+         with tempfile.NamedTemporaryFile(prefix='.boot-', dir=out.parent, delete=False) as handle:
+@@ -152,13 +158,14 @@ def build(ctx, uefi, fd, dtb, ramdisk=None, output=None):
+             pending.unlink(missing_ok=True)
+     report.update(image_sha256=sha256_file(out), image_bytes=out.stat().st_size, fd_sha256=sha256_file(fd),
+                   dtb_sha256=hashlib.sha256(tree).hexdigest(), shim_bytes=len(shim), hardware_tested=False,
++                  kernel_compression=compression, dtb_appended=append_dtb,
+                   compatibility=compatibility, selected_fd_sha256=hashlib.sha256(firmware).hexdigest())
+     (out.parent / 'boot.json').write_text(json.dumps(report, indent=2) + '\n')
+     log(f'bootimg: {out} ({out.stat().st_size} bytes)')
+     return out
+ 
+ 
+-def verify(path, combined, tree, ramdisk_path, image, compression='gzip'):
++def verify(path, combined, tree, ramdisk_path, image, compression='gzip', append_dtb=True):
+     """Unpack the image and compare every part with its input."""
+     data = Path(path).read_bytes()
+     if data[:8] != b'ANDROID!':
+@@ -189,12 +196,13 @@ def verify(path, combined, tree, ramdisk_path, image, compression='gzip'):
+         start = page
+         ramdisk_start = page * (1 + -(-kernel_size // page))
+     kernel = data[start:start + kernel_size]
++    expected_tree = tree if append_dtb else b''
+     if compression == 'gzip':
+         unpacker = zlib.decompressobj(16 + zlib.MAX_WBITS)
+-        if unpacker.decompress(kernel) != combined or not unpacker.eof or unpacker.unused_data != tree:
+-            raise Error('gzip, firmware and appended device tree do not round-trip')
+-    elif kernel != combined + tree:
+-        raise Error('firmware and appended device tree do not round-trip')
++        if unpacker.decompress(kernel) != combined or not unpacker.eof or unpacker.unused_data != expected_tree:
++            raise Error('gzip firmware and device-tree bytes do not round-trip')
++    elif kernel != combined + expected_tree:
++        raise Error('firmware and device-tree bytes do not round-trip')
+     if data[ramdisk_start:ramdisk_start + ramdisk_size] != Path(ramdisk_path).read_bytes():
+         raise Error('ramdisk bytes differ')
+     return {'kernel_sha256': hashlib.sha256(kernel).hexdigest(), 'ramdisk_bytes': ramdisk_size,
+diff --git a/scripts/unixnu/devicetree.py b/scripts/unixnu/devicetree.py
+index 3dde210..c98fb51 100644
+--- a/scripts/unixnu/devicetree.py
++++ b/scripts/unixnu/devicetree.py
+@@ -157,6 +157,25 @@ def registers(entry):
+             for i in range(0, len(cells), stride)]
+ 
+ 
++def memory_span(entry, allow_disjoint=False):
++    """Return the enclosing physical span of a memory node's non-overlapping ranges."""
++    ranges = registers(entry)
++    if not ranges:
++        raise Error('ADT handoff requires at least one DRAM range')
++    if len(ranges) > 1 and not allow_disjoint:
++        raise Error('ADT handoff requires one contiguous DRAM range unless excluded ranges are enabled')
++    ordered = sorted(ranges)
++    previous_end = None
++    for base, size in ordered:
++        end = base + size
++        if size <= 0 or end <= base:
++            raise Error(f'{entry.name}: invalid DRAM range {base:#x}+{size:#x}')
++        if previous_end is not None and base < previous_end:
++            raise Error(f'{entry.name}: overlapping DRAM ranges')
++        previous_end = end
++    return ordered[0][0], previous_end - ordered[0][0]
++
++
+ def physical(bus, address, size):
+     """Translate a register range through each parent bus."""
+     while bus.parent is not None:
+@@ -300,9 +319,9 @@ def generate(dtb, config, *, unique_chip_id=None, data=False, trust=False, addon
+     payload, platform = config.get('payload', {}), config.get('adt', {})
+     options = payload.get('adt', {})
+     memory = [entry for entry in root.children if entry.strings('device_type') == ['memory'] and entry.enabled()]
+-    if len(memory) != 1 or len(registers(memory[0])) != 1:
+-        raise Error('ADT handoff requires one contiguous DRAM range')
+-    dram_base, dram_size = registers(memory[0])[0]
++    if len(memory) != 1:
++        raise Error('ADT handoff requires exactly one enabled DRAM node')
++    dram_base, dram_size = memory_span(memory[0], allow_disjoint=bool(options.get('owned_memory_excluded_ranges')))
+     if payload.get('dram_size') is not None and int(str(payload['dram_size']), 0) != dram_size:
+         raise Error('payload.dram_size differs from the hardware DTS')
+     # xnu-12377 takes 4 x 64 seed bytes on ARM and panics with fewer; older kernels read the first 64.
+diff --git a/scripts/unixnu/firmware.py b/scripts/unixnu/firmware.py
+index 13f7c1c..21e64c8 100644
+--- a/scripts/unixnu/firmware.py
++++ b/scripts/unixnu/firmware.py
+@@ -29,6 +29,7 @@ def preflight_toolchain(ctx):
+ def build(ctx, modules, uefi, edk2, target='DEBUG'):
+     log(f'firmware: {uefi.name}')
+     fw, config = uefi_config(ctx, uefi)
++    firmware_only = ctx.args.command == 'build' and ctx.args.steps == ['firmware']
+     for name in ('clang', 'python3', 'make'):
+         tool(name)
+     base, size = config['uefi_fd']['base'], config['uefi_fd']['size']
+@@ -40,7 +41,9 @@ def build(ctx, modules, uefi, edk2, target='DEBUG'):
+         parts = shlex.split(entry)
+         script = Path(parts[0]) if Path(parts[0]).is_absolute() else ctx.tree / parts[0]
+         run(['python3', script, *parts[1:]], cwd=ctx.tree,
+-            env=dict(os.environ, UNIXNU_UEFI=str(uefi), UNIXNU_DEVICE=str(ctx.device)), log_file=ctx.logs / 'firmware-preflight.log')
++            env=dict(os.environ, UNIXNU_UEFI=str(uefi), UNIXNU_DEVICE=str(ctx.device),
++                     UNIXNU_BUILD_ONLY_FIRMWARE='1' if firmware_only else '0'),
++            log_file=ctx.logs / 'firmware-preflight.log')
+     defines = {'FD_BASE': hex(base), 'FD_SIZE': hex(size), 'FD_BLOCKS': str(size // 0x1000)}
+     defines.update({key: str(value) for key, value in fw.get('defines', {}).items()})
+     fields = {'uefi': str(uefi), 'edk2': str(edk2), 'tree': str(ctx.tree)}
+diff --git a/scripts/unixnu/test_bootimg.py b/scripts/unixnu/test_bootimg.py
+new file mode 100644
+index 0000000..8b4a0c5
+--- /dev/null
++++ b/scripts/unixnu/test_bootimg.py
+@@ -0,0 +1,101 @@
++#!/usr/bin/env python3
++"""Exercise boot-image kernel compression and optional appended device trees."""
++import gzip
++import json
++from pathlib import Path
++import struct
++import sys
++from tempfile import TemporaryDirectory
++from types import SimpleNamespace
++import unittest
++import zlib
++from unittest.mock import patch
++
++sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
++from unixnu import bootimg
++
++PAGE = 4096
++DTB = struct.pack('>II', 0xd00dfeed, 8)
++FAKE_MKBOOTIMG = r'''#!/usr/bin/env python3
++import argparse
++from pathlib import Path
++import struct
++
++parser = argparse.ArgumentParser()
++parser.add_argument('--kernel', required=True)
++parser.add_argument('--ramdisk', required=True)
++parser.add_argument('-o', required=True)
++parser.add_argument('--base', type=lambda value: int(value, 0), default=0)
++parser.add_argument('--kernel_offset', type=lambda value: int(value, 0), default=0x8000)
++parser.add_argument('--tags_offset', type=lambda value: int(value, 0), default=0x1e00000)
++parser.add_argument('--pagesize', type=int, default=4096)
++parser.add_argument('--header_version', type=int, default=0)
++parser.add_argument('--ramdisk_offset', type=lambda value: int(value, 0), default=0x1000000)
++args = parser.parse_args()
++
++page = args.pagesize
++kernel = Path(args.kernel).read_bytes()
++ramdisk = Path(args.ramdisk).read_bytes()
++header = bytearray(page)
++header[:8] = b'ANDROID!'
++struct.pack_into('<10I', header, 8, len(kernel), args.base + args.kernel_offset,
++                 len(ramdisk), args.base + args.ramdisk_offset if ramdisk else 0,
++                 0, 0, args.base + args.tags_offset, page, args.header_version, 0)
++kernel_padding = bytes((-len(kernel)) % page)
++Path(args.o).write_bytes(bytes(header) + kernel + kernel_padding + ramdisk)
++'''
++
++
++class BootImageKernel(unittest.TestCase):
++    def test_device_kernel_options_control_build_and_round_trip(self):
++        for compression in ('gzip', 'none'):
++            for append_dtb in (True, False):
++                with self.subTest(compression=compression, append_dtb=append_dtb), TemporaryDirectory() as temp:
++                    root = Path(temp)
++                    uefi = root / 'uefi'
++                    (uefi / 'Resources/Configs').mkdir(parents=True)
++                    (uefi / 'Resources/Scripts').mkdir(parents=True)
++                    config = uefi / 'Resources/Configs/elish.toml'
++                    config.write_text(
++                        '[boot_shim]\nrequires_kernel_header = true\n'
++                        '[uefi_fd]\nbase = 0x9fc00000\nsize = 7\n'
++                        f'[boot_image_kernel]\nkernel_compression = "{compression}"\nappend_dtb = {str(append_dtb).lower()}\n'
++                        '[boot_image]\nheader_version = 0\nbase = 0\nkernel_offset = 0x8000\n'
++                        'tags_offset = 0x1e00000\npagesize = 4096\n'
++                    )
++                    (uefi / 'Resources/Scripts/mkbootimg.py').write_text(FAKE_MKBOOTIMG)
++                    fd = root / 'uefi.fd'
++                    fd.write_bytes(b'UEFI-FD')
++                    dtb = root / 'device.dtb'
++                    dtb.write_bytes(DTB)
++                    output = root / 'out/boot.img'
++                    ctx = SimpleNamespace(
++                        board={'firmware': {'config': 'elish'}},
++                        work=root / 'work',
++                        logs=root / 'logs',
++                        tree=root,
++                    )
++
++                    with patch.object(bootimg, 'compile_shim', return_value=b'SHIM'):
++                        bootimg.build(ctx, uefi, fd, dtb, output=output)
++
++                    report = json.loads((output.parent / 'boot.json').read_text())
++                    image = output.read_bytes()
++                    kernel_size = struct.unpack_from('<I', image, 8)[0]
++                    kernel = image[PAGE:PAGE + kernel_size]
++                    combined = b'SHIM' + fd.read_bytes()
++                    expected_tail = DTB if append_dtb else b''
++
++                    self.assertEqual(report['kernel_compression'], compression)
++                    self.assertEqual(report['dtb_appended'], append_dtb)
++                    if compression == 'gzip':
++                        unpacker = zlib.decompressobj(16 + zlib.MAX_WBITS)
++                        self.assertEqual(unpacker.decompress(kernel), combined)
++                        self.assertTrue(unpacker.eof)
++                        self.assertEqual(unpacker.unused_data, expected_tail)
++                    else:
++                        self.assertEqual(kernel, combined + expected_tail)
++
++
++if __name__ == '__main__':
++    unittest.main()

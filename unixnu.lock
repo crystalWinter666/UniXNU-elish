@@ -1,6 +1,4 @@
-# Resolved git sources, seeded from the verified pin set of UniXNU-enuma (same SM8250-AC SoC +
-# iPadOS 17.7.11 OS profile). Regenerate with `unixnu fetch` on the first macOS build host;
-# local sources are never recorded.
+# Resolved git sources, written by "unixnu fetch". Local sources are never recorded.
 
 [source."AvailabilityVersions"]
 commit = "933f9360f1b70dfbda5548386a3d65e0358b4f7d"

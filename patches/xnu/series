@@ -10,3 +10,4 @@
 # series' zzz-boot-progress.patch edits the same bsd_init() region (it wraps the sheng_pmgr_run() call
 # with boot_progress stages) and cannot apply until that block exists.
 sheng-platform-power.patch
+elish-memory-excluded-ranges.patch

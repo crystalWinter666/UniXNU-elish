@@ -1,0 +1,919 @@
+RamLog: 0xB0000000, resets warm into fastboot, PON 0x00000000
+ELISH_SEC_SMMU: entering before PlatformInitialize
+ELISH_SEC_SMMU: sCR0=0x00270406 ID0=0x4C017E57 ID1=0x6000004A ID2=0x00005111
+ELISH_SEC_SMMU: group=0 SMR=0x800004A0 SID=0x4A0 mask=0x0 S2CR=0x00000000 type=0 cb=0
+ELISH_SEC_SMMU: cb=0 CBAR=0x0001F000 CBA2R=0x00000001 SCTLR=0x000000E0 TTBR0=0x0000000000000000 TCR=0x00000000
+ELISH_SEC_SMMU: group=1 SMR=0x800000C0 SID=0xC0 mask=0x0 S2CR=0x00000001 type=0 cb=1
+ELISH_SEC_SMMU: cb=1 CBAR=0x0001F000 CBA2R=0x00000001 SCTLR=0x000000E0 TTBR0=0x0000000000000000 TCR=0x00000000
+ELISH_SEC_SMMU: group=2 SMR=0x800004E0 SID=0x4E0 mask=0x0 S2CR=0x00000002 type=0 cb=2
+ELISH_SEC_SMMU: cb=2 CBAR=0x0001F000 CBA2R=0x00000001 SCTLR=0x000000E0 TTBR0=0x0000000000000000 TCR=0x00000000
+ELISH_SEC_SMMU: group=3 SMR=0x800000E0 SID=0xE0 mask=0x0 S2CR=0x00000003 type=0 cb=3
+ELISH_SEC_SMMU: cb=3 CBAR=0x0001F000 CBA2R=0x00000001 SCTLR=0x000000E0 TTBR0=0x0000000000000000 TCR=0x00000000
+ELISH_SEC_SMMU: group=4 SMR=0x84020820 SID=0x820 mask=0x402 S2CR=0x00000004 type=0 cb=4
+ELISH_SEC_SMMU: cb=4 CBAR=0x0001F000 CBA2R=0x00000001 SCTLR=0x000000E0 TTBR0=0x0000000000000000 TCR=0x00000000
+ELISH_SEC_SMMU: pre-detach snapshot complete, valid groups=5
+ELISH_SEC_SMMU: retaining qualified UFS routes through SEC
+
+Project Silicium for Xiaomi Xiaomi Pad 5 Pro Wi-Fi
+Firmware Version 4.0 Build at 09:50:31 on Nov 25 2026
+
+MMU InMMU: 50 regions
+MMU: map valid
+MMU: HOBs built, enabling
+MMU: enabled
+SEC: memory HOBs done
+SEC: platform HOBs done (Success)
+SEC: HOB list ok, 103 entries
+SEC: constructor debug
+SEC: constructor guided-section
+SEC: constructor mmu
+SEC: constructor lzma
+SEC: constructors done
+SEC: HOB list ok, 107 entries
+SEC: FV decompressed (Success)
+SEC: loading DXE core
+Loading DxeCore at 0x009B4D4000 EntryPoint=0x009B4D52F4
+CoreInitializeMemoryServices:
+  BaseAddress - 0x98902000 Length - 0x2BD2000 MinimalMemorySizeNeeded - 0x1D2000
+AllocateMemoryTypeInformationBins: Allocated 0x9B311000 - 0x9B4D2FFF for memory bins
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9B4FDEB8
+ProtectUefiImage - 0x9B4FDEB8
+  - 0x000000009B4D4000 - 0x0000000000030000
+InstallProtocolInterface: 434F695C-EF26-4A12-9EBA-DDEF0097497C 9B4FD810
+DxeCoreAdvancedLoggerLibConstructor Initialized. mLoggerInfo = 9AF0A000, Container=9B4FD810
+ProcessProtocolRegistration: Registering for 27CFAC87-46CC-11D4-9A38-0090273FC14D
+DxeMemoryProtectionHobLibConstructor - Unable to fetch memory protection HOB. Zero-ing memory protection settings
+DxeMain: MemoryBaseAddress=0x98902000 MemoryLength=0x2BD2000
+HOBLIST address in DXE = 0x9B30A018
+Memory Allocation 0x00000004 0x805D0000 - 0x805EFFFF
+Memory Allocation 0x00000000 0x80600000 - 0x806FFFFF
+Memory Allocation 0x00000004 0x80700000 - 0x807FFFFF
+Memory Allocation 0x00000000 0x80884000 - 0x80893FFF
+Memory Allocation 0x00000007 0x98900000 - 0x9BBFFFFF
+Memory Allocation 0x00000004 0x9BC00000 - 0x9BFFFFFF
+Memory Allocation 0x00000004 0x9F800000 - 0x9F9FFFFF
+Memory Allocation 0x00000000 0x9FA00000 - 0x9FBFFFFF
+Memory Allocation 0x00000004 0x9FC00000 - 0x9FEFFFFF
+Memory Allocation 0x00000004 0x9FF00000 - 0x9FF8BFFF
+Memory Allocation 0x00000004 0x9FF8C000 - 0x9FF8CFFF
+Memory Allocation 0x00000004 0x9FF8D000 - 0x9FF8FFFF
+Memory Allocation 0x00000004 0x9FF90000 - 0x9FFCFFFF
+Memory Allocation 0x00000006 0x9FFF7000 - 0x9FFFEFFF
+Memory Allocation 0x00000006 0x9FFFF000 - 0x9FFFFFFF
+Memory Allocation 0x00000000 0xA0000000 - 0xAFFFFFFF
+Memory Allocation 0x00000004 0x9BBFF000 - 0x9BBFFFFF
+Memory Allocation 0x00000004 0x9BBFE000 - 0x9BBFEFFF
+Memory Allocation 0x00000004 0x9BBFD000 - 0x9BBFDFFF
+Memory Allocation 0x00000004 0x9BBFC000 - 0x9BBFCFFF
+Memory Allocation 0x00000004 0x9BBFB000 - 0x9BBFBFFF
+Memory Allocation 0x00000004 0x9BBFA000 - 0x9BBFAFFF
+Memory Allocation 0x00000004 0x9BBF9000 - 0x9BBF9FFF
+Memory Allocation 0x00000004 0x9BBF8000 - 0x9BBF8FFF
+Memory Allocation 0x00000004 0x9BBF7000 - 0x9BBF7FFF
+Memory Allocation 0x00000004 0x9BBF6000 - 0x9BBF6FFF
+Memory Allocation 0x00000004 0x9BBF5000 - 0x9BBF5FFF
+Memory Allocation 0x00000004 0x9BBF4000 - 0x9BBF4FFF
+Memory Allocation 0x00000004 0x9BBF3000 - 0x9BBF3FFF
+Memory Allocation 0x00000004 0x9BBF2000 - 0x9BBF2FFF
+Memory Allocation 0x00000004 0x9BBF1000 - 0x9BBF1FFF
+Memory Allocation 0x00000004 0x9BBF0000 - 0x9BBF0FFF
+Memory Allocation 0x00000004 0x9BBEF000 - 0x9BBEFFFF
+Memory Allocation 0x00000004 0x9BBEE000 - 0x9BBEEFFF
+Memory Allocation 0x00000004 0x9BBED000 - 0x9BBEDFFF
+Memory Allocation 0x00000004 0x9BBEC000 - 0x9BBECFFF
+Memory Allocation 0x00000004 0x9BBEB000 - 0x9BBEBFFF
+Memory Allocation 0x00000004 0x9BBEA000 - 0x9BBEAFFF
+Memory Allocation 0x00000004 0x9BBE9000 - 0x9BBE9FFF
+Memory Allocation 0x00000004 0x9BBE8000 - 0x9BBE8FFF
+Memory Allocation 0x00000004 0x9BBE7000 - 0x9BBE7FFF
+Memory Allocation 0x00000004 0x9BBE6000 - 0x9BBE6FFF
+Memory Allocation 0x00000004 0x9BBE5000 - 0x9BBE5FFF
+Memory Allocation 0x00000004 0x9BBE4000 - 0x9BBE4FFF
+Memory Allocation 0x00000004 0x9BBE3000 - 0x9BBE3FFF
+Memory Allocation 0x00000004 0x9FF90000 - 0x9FFCFFFF
+Memory Allocation 0x00000004 0x9BBD3000 - 0x9BBE2FFF
+Memory Allocation 0x00000004 0x9B86B000 - 0x9BBD2FFF
+Memory Allocation 0x00000004 0x9B504000 - 0x9B86AFFF
+Memory Allocation 0x00000003 0x9B4D4000 - 0x9B503FFF
+Memory Allocation 0x00000003 0x9B4D4000 - 0x9B503FFF
+FV Hob            0x9FC00000 - 0x9FEFFFFF
+FV Hob            0x9B504000 - 0x9B869FFF
+FV2 Hob           0x9B504000 - 0x9B869FFF
+                  00000000-0000-0000-0000-000000000000 - 9E21FD93-9C72-4C15-8C4B-E77F1DB2D792
+FV3 Hob           0x9B504000 - 0x9B869FFF - 0x0 - 0x1
+                  00000000-0000-0000-0000-000000000000 - 9E21FD93-9C72-4C15-8C4B-E77F1DB2D792
+InstallProtocolInterface: D8117CFE-94A6-11D4-9A3A-0090273FC14D 9B4FD470
+InstallProtocolInterface: 8F644FA9-E850-4DB1-9CE2-0B44698E8DA4 9AF075B0
+InstallProtocolInterface: 09576E91-6D3F-11D2-8E39-00A0C969723B 9AF07698
+InstallProtocolInterface: 8F644FA9-E850-4DB1-9CE2-0B44698E8DA4 9AF072B0
+InstallProtocolInterface: 09576E91-6D3F-11D2-8E39-00A0C969723B 9AF07398
+InstallProtocolInterface: 220E73B6-6BDB-4413-8405-B974B108619A 9AEFECB0
+InstallProtocolInterface: 220E73B6-6BDB-4413-8405-B974B108619A 9AEFE8B0
+Loading driver 80CF7257-87AB-47F9-A3FE-D50B76D89541
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AD447C0
+Loading driver at 0x0009AD32000 EntryPoint=0x0009AD33050 PcdDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AD44618
+ProtectUefiImage - 0x9AD447C0
+  - 0x000000009AD32000 - 0x000000000000B000
+InstallProtocolInterface: 11B34006-D85B-4D0A-A290-D5A571310EF7 9AD3A1B0
+InstallProtocolInterface: 13A3F0F6-264A-3EF0-F2E0-DEC512342F34 9AD3A120
+InstallProtocolInterface: 5BE40F57-FA68-4610-BBBF-E9C5FCDAD365 9AD3A100
+InstallProtocolInterface: FD0F4478-0EFD-461D-BA2D-E58C45FD5F5E 9AD3A030
+Loading driver 90A49AFD-422F-08AE-9611-E788D3804845
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AD432C0
+Loading driver at 0x0009B397000 EntryPoint=0x0009B398000 EnvDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AD43798
+ProtectUefiImage - 0x9AD432C0
+  - 0x000000009B397000 - 0x0000000000010000
+InstallProtocolInterface: 5172FFB5-4253-7D51-C641-A701F973103C 9B3A41E0
+InstallProtocolInterface: F57F73ED-0AFC-4723-9374-2CEBC0198EF9 9B3A4218
+InstallProtocolInterface: DC241E53-498B-3B59-AD17-C8B29E6B36A8 9B3A4208
+Loading driver D93CE3D8-A7EB-4730-8C8E-CC466A9ECC3C
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AD417C0
+Loading driver at 0x0009B330000 EntryPoint=0x0009B340104 ReportStatusCodeRouterRuntimeDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AD41698
+ProtectUefiImage - 0x9AD417C0
+  - 0x000000009B330000 - 0x0000000000060000
+InstallProtocolInterface: 86212936-0E76-41C8-A03A-2AF2FC1C39E2 9B360018
+InstallProtocolInterface: D2B2B828-0826-48A7-B3DF-983C006024F0 9B360010
+Loading driver B601F8C4-43B7-4784-95B1-F4226CB40CEE
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AD40BC0
+Loading driver at 0x0009ACC0000 EntryPoint=0x0009ACD0050 RuntimeDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AD40A18
+ProtectUefiImage - 0x9AD40BC0
+  - 0x000000009ACC0000 - 0x0000000000060000
+InstallProtocolInterface: B7DFB4E1-052F-449F-87BE-9818FC91B733 9ACF0E40
+Loading driver B8D9777E-D72A-451F-9BDB-BAFB52A68415
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AD401C0
+Loading driver at 0x0009AC9E000 EntryPoint=0x0009AC9F1AC ArmCpuDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AD40618
+ProtectUefiImage - 0x9AD401C0
+  - 0x000000009AC9E000 - 0x0000000000011000
+DxeMemoryProtectionHobLibConstructor - Unable to fetch memory protection HOB. Zero-ing memory protection settings
+InstallProtocolInterface: 26BACCB1-6F42-11D4-BCE7-0080C73C8881 9ACAAEE0
+---Currently Protected Images---
+---Final Bitmap---
+Bitmap: 1111111111111111111111111111111111111111111111111111111111111111
+---Memory Map with Populated Access Attributes---
+Memory Range: 0x100000 - 0x178000. Type:11, Attributes: 0x0
+Memory Range: 0x400000 - 0x500000. Type:11, Attributes: 0x0
+Memory Range: 0x780000 - 0x787000. Type:11, Attributes: 0x0
+Memory Range: 0x790000 - 0x7A0000. Type:11, Attributes: 0x0
+Memory Range: 0x800000 - 0x8D0000. Type:11, Attributes: 0x0
+Memory Range: 0x900000 - 0x9D0000. Type:11, Attributes: 0x0
+Memory Range: 0xA00000 - 0xAD0000. Type:11, Attributes: 0x0
+Memory Range: 0x1D84000 - 0x1D88000. Type:11, Attributes: 0x0
+Memory Range: 0x1D90000 - 0x1D98000. Type:11, Attributes: 0x0
+Memory Range: 0x1DC0000 - 0x1E00000. Type:11, Attributes: 0x0
+Memory Range: 0x1FC0000 - 0x1FF0000. Type:11, Attributes: 0x0
+Memory Range: 0x2C7D000 - 0x2C7F000. Type:11, Attributes: 0x0
+Memory Range: 0x2C90000 - 0x2C9A000. Type:11, Attributes: 0x0
+Memory Range: 0x5A00000 - 0x5AD0000. Type:11, Attributes: 0x0
+Memory Range: 0x8800000 - 0x8A00000. Type:11, Attributes: 0x0
+Memory Range: 0xA600000 - 0xA71B000. Type:11, Attributes: 0x0
+Memory Range: 0xA720000 - 0xA730000. Type:11, Attributes: 0x0
+Memory Range: 0xA800000 - 0xA91B000. Type:11, Attributes: 0x0
+Memory Range: 0xB000000 - 0xF000000. Type:11, Attributes: 0x0
+Memory Range: 0xF100000 - 0xF400000. Type:11, Attributes: 0x0
+Memory Range: 0xF500000 - 0xF800000. Type:11, Attributes: 0x0
+Memory Range: 0xF900000 - 0xFC00000. Type:11, Attributes: 0x0
+Memory Range: 0x146BF000 - 0x146C0000. Type:11, Attributes: 0x0
+Memory Range: 0x15000000 - 0x150D0000. Type:11, Attributes: 0x0
+Memory Range: 0x17800000 - 0x25181000. Type:11, Attributes: 0x0
+Memory Range: 0x805D0000 - 0x805F0000. Type:4, Attributes: 0x0
+Memory Range: 0x80600000 - 0x80700000. Type:0, Attributes: 0x0
+Memory Range: 0x80700000 - 0x80800000. Type:4, Attributes: 0x0
+Memory Range: 0x80860000 - 0x80880000. Type:0, Attributes: 0x0
+Memory Range: 0x80884000 - 0x80894000. Type:0, Attributes: 0x0
+Memory Range: 0x80900000 - 0x80B00000. Type:0, Attributes: 0x0
+Memory Range: 0x82400000 - 0x85E00000. Type:0, Attributes: 0x0
+Memory Range: 0x86000000 - 0x93200000. Type:0, Attributes: 0x0
+Memory Range: 0x98900000 - 0x9AC00000. Type:7, Attributes: 0x0
+Memory Range: 0x9AC00000 - 0x9AC01000. Type:4, Attributes: 0x0
+Memory Range: 0x9AC01000 - 0x9AC9E000. Type:7, Attributes: 0x0
+Memory Range: 0x9AC9E000 - 0x9ACAF000. Type:3, Attributes: 0x0
+Memory Range: 0x9ACAF000 - 0x9ACBB000. Type:7, Attributes: 0x0
+Memory Range: 0x9ACBB000 - 0x9ACC0000. Type:5, Attributes: 0x0
+Memory Range: 0x9ACC0000 - 0x9AD20000. Type:5, Attributes: 0x0
+Memory Range: 0x9AD20000 - 0x9AD2B000. Type:5, Attributes: 0x0
+Memory Range: 0x9AD2B000 - 0x9AD30000. Type:7, Attributes: 0x0
+Memory Range: 0x9AD30000 - 0x9AD32000. Type:4, Attributes: 0x0
+Memory Range: 0x9AD32000 - 0x9AD3D000. Type:3, Attributes: 0x0
+Memory Range: 0x9AD3D000 - 0x9AF0A000. Type:4, Attributes: 0x0
+Memory Range: 0x9AF0A000 - 0x9B30A000. Type:0, Attributes: 0x0
+Memory Range: 0x9B30A000 - 0x9B311000. Type:4, Attributes: 0x0
+Memory Range: 0x9B311000 - 0x9B330000. Type:5, Attributes: 0x0
+Memory Range: 0x9B330000 - 0x9B390000. Type:5, Attributes: 0x0
+Memory Range: 0x9B390000 - 0x9B397000. Type:5, Attributes: 0x0
+Memory Range: 0x9B397000 - 0x9B3A7000. Type:5, Attributes: 0x0
+Memory Range: 0x9B3A7000 - 0x9B4D3000. Type:6, Attributes: 0x0
+Memory Range: 0x9B4D3000 - 0x9B4D4000. Type:4, Attributes: 0x0
+Memory Range: 0x9B4D4000 - 0x9B504000. Type:3, Attributes: 0x0
+Memory Range: 0x9B504000 - 0x9C000000. Type:4, Attributes: 0x0
+Memory Range: 0x9C000000 - 0x9E400000. Type:0, Attributes: 0x0
+Memory Range: 0x9F800000 - 0x9FA00000. Type:4, Attributes: 0x0
+Memory Range: 0x9FA00000 - 0x9FC00000. Type:0, Attributes: 0x0
+Memory Range: 0x9FC00000 - 0x9FFD0000. Type:4, Attributes: 0x0
+Memory Range: 0x9FFF7000 - 0xA0000000. Type:6, Attributes: 0x0
+Memory Range: 0xA0000000 - 0xB0000000. Type:0, Attributes: 0x0
+Memory Range: 0xB0000000 - 0xB0400000. Type:0, Attributes: 0x0
+---------------------------------------
+InitializePageAttributesForMemoryProtectionPolicy: applying strict permissions to active memory regions
+Loading driver DE371F7C-DEC4-4D21-ADF1-593ABCC15882
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AD3F840
+Loading driver at 0x0009ACB1000 EntryPoint=0x0009ACB2050 ArmGicDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AD3F618
+ProtectUefiImage - 0x9AD3F840
+  - 0x000000009ACB1000 - 0x000000000000A000
+InstallProtocolInterface: 2890B3EA-053D-1643-AD0C-D64808DA3FF1 9ACB8078
+InstallProtocolInterface: 32898322-2DA1-474A-BAAA-F3F7CF569470 9ACB8100
+Loading driver 4C6E0267-C77D-410D-8100-1495911A989D
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AD2C040
+Loading driver at 0x0009AC97000 EntryPoint=0x0009AC98050 MetronomeDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AD2CD98
+ProtectUefiImage - 0x9AD2C040
+  - 0x000000009AC97000 - 0x0000000000007000
+InstallProtocolInterface: 26BACCB2-6F42-11D4-BCE7-0080C73C8881 9AC9B000
+Loading driver 49EA041E-6752-42CA-B0B1-7344FE2546B7
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AD2C340
+Loading driver at 0x0009AC8C000 EntryPoint=0x0009AC8D050 ArmTimerDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AD2C918
+ProtectUefiImage - 0x9AD2C340
+  - 0x000000009AC8C000 - 0x0000000000007000
+InstallProtocolInterface: 26BACCB3-6F42-11D4-BCE7-0080C73C8881 9AC90048
+Loading driver F541D663-4A48-40AA-AABF-FF158CCAE34C
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AD2F0C0
+Loading driver at 0x0009AC77000 EntryPoint=0x0009AC78000 SmemDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AD2FA98
+ProtectUefiImage - 0x9AD2F0C0
+  - 0x000000009AC77000 - 0x000000000000A000
+InstallProtocolInterface: F4E5C7D0-D239-47CB-AACD-7F66EF763238 9AC7F078
+Loading driver 348C4D62-BFBD-4882-9ECE-C80BB1C4783B
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AD2E040
+Loading driver at 0x0009AC3B000 EntryPoint=0x0009AC3C050 HiiDatabase.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AD2F598
+ProtectUefiImage - 0x9AD2E040
+  - 0x000000009AC3B000 - 0x0000000000020000
+InstallProtocolInterface: E9CA4775-8657-47FC-97E7-7ED65A084324 9AC581D8
+InstallProtocolInterface: 0FD96974-23AA-4CDC-B9CB-98D17750322A 9AC58250
+InstallProtocolInterface: EF9FC172-A1B2-4693-B327-6D32FC416042 9AC58278
+InstallProtocolInterface: 587E72D7-CC50-4F79-8209-CA291FC1A10F 9AC582D0
+InstallProtocolInterface: 0A8BADD5-03B8-4D19-B128-7B8F0EDAA596 9AC58300
+InstallProtocolInterface: 31A6406A-6BDF-4E46-B2A2-EBAA89C40920 9AC581F8
+InstallProtocolInterface: 1A1241E6-8F19-41A9-BC0E-E8EF39E06546 9AC58220
+Loading driver 51CCF399-4FDF-4E55-A45B-E123F84D456A
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AD2D040
+Loading driver at 0x0009AC6B000 EntryPoint=0x0009AC6C050 ConPlatformDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AD2E618
+ProtectUefiImage - 0x9AD2D040
+  - 0x000000009AC6B000 - 0x000000000000C000
+OnVariablePolicyNotification: - Unable to locate variable policy protocol - Status=Not Found
+InstallProtocolInterface: 18A031AB-B443-4D1A-A5C0-0C09261E9F71 9AC73F50
+InstallProtocolInterface: 18A031AB-B443-4D1A-A5C0-0C09261E9F71 9AC73F80
+Loading driver 408EDCEC-CF6D-477C-A5A8-B4844E3DE281
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AD2D440
+Loading driver at 0x0009AC5D000 EntryPoint=0x0009AC5E050 ConSplitterDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AD2D718
+ProtectUefiImage - 0x9AD2D440
+  - 0x000000009AC5D000 - 0x000000000000E000
+InstallProtocolInterface: 18A031AB-B443-4D1A-A5C0-0C09261E9F71 9AC67EE8
+InstallProtocolInterface: 18A031AB-B443-4D1A-A5C0-0C09261E9F71 9AC67F18
+InstallProtocolInterface: 18A031AB-B443-4D1A-A5C0-0C09261E9F71 9AC67F48
+InstallProtocolInterface: 18A031AB-B443-4D1A-A5C0-0C09261E9F71 9AC67F78
+InstallProtocolInterface: 18A031AB-B443-4D1A-A5C0-0C09261E9F71 9AC67FA8
+InstallProtocolInterface: 387477C1-69C7-11D2-8E39-00A0C969723B 9AC681B0
+InstallProtocolInterface: DD9E7534-7762-4698-8C14-F58517A625AA 9AC681E0
+InstallProtocolInterface: 31878C87-0B75-11D5-9A4F-0090273FC14D 9AC68250
+InstallProtocolInterface: 8D59D32B-C655-4AE9-9B15-F25904992A43 9AC682A8
+InstallProtocolInterface: 387477C2-69C7-11D2-8E39-00A0C969723B 9AC67FF0
+InstallProtocolInterface: 387477C2-69C7-11D2-8E39-00A0C969723B 9AC680D0
+Loading driver CCCB0C28-4B24-11D5-9A5A-0090273FC14D
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AC96040
+Loading driver at 0x0009AC2E000 EntryPoint=0x0009AC2F050 GraphicsConsoleDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AC96D98
+ProtectUefiImage - 0x9AC96040
+  - 0x000000009AC2E000 - 0x000000000000D000
+InstallProtocolInterface: 18A031AB-B443-4D1A-A5C0-0C09261E9F71 9AC38398
+Loading driver DCFD1E6D-788D-4FFC-8E1B-CA2F75651A92
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AC96440
+Loading driver at 0x0009AC26000 EntryPoint=0x0009AC27050 SimpleFbDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AC95018
+ProtectUefiImage - 0x9AC96440
+  - 0x000000009AC26000 - 0x0000000000008000
+0: shl:0 shr:0 mask:FF0000
+1: shl:0 shr:0 mask:FF00
+2: shl:0 shr:0 mask:FF
+Bytes per pixel: 4
+0: shl:0 shr:0 mask:FF0000
+1: shl:0 shr:0 mask:FF00
+2: shl:0 shr:0 mask:FF
+Bytes per pixel: 4
+InstallProtocolInterface: 09576E91-6D3F-11D2-8E39-00A0C969723B 9AC2BE50
+InstallProtocolInterface: 9042A9DE-23DC-4A38-96FB-7ADED080516A 9AC2BE68
+GraphicsConsole video resolution 1600 x 2560
+Graphics - Mode 0, Column = 80, Row = 25
+Graphics - Mode 1, Column = 80, Row = 50
+Graphics - Mode 2, Column = 100, Row = 31
+Graphics - Mode 3, Column = 128, Row = 40
+Graphics - Mode 4, Column = 160, Row = 42
+Graphics - Mode 5, Column = 200, Row = 134
+Graphics Console Started, Mode: 0
+InstallProtocolInterface: 387477C2-69C7-11D2-8E39-00A0C969723B 9AC95828
+Loading driver F4C010C0-96F1-4B49-BFDA-E982B807F44E
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AC952C0
+Loading driver at 0x0009AC1D000 EntryPoint=0x0009AC1E050 RamManagerDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AC95618
+ProtectUefiImage - 0x9AC952C0
+  - 0x000000009AC1D000 - 0x0000000000009000
+Successfully Mapped RAM Range: 0x80000000 - 0x805D0000
+Successfully Mapped RAM Range: 0x805F0000 - 0x80600000
+Successfully Mapped RAM Range: 0x80800000 - 0x80860000
+Successfully Mapped RAM Range: 0x80880000 - 0x80884000
+Successfully Mapped RAM Range: 0x80894000 - 0x80900000
+Successfully Mapped RAM Range: 0x80B00000 - 0x82400000
+Successfully Mapped RAM Range: 0x85E00000 - 0x86000000
+Successfully Mapped RAM Range: 0x93200000 - 0x98900000
+Successfully Mapped RAM Range: 0x9E400000 - 0x9F800000
+Successfully Mapped RAM Range: 0x9FFD0000 - 0x9FFF7000
+Successfully Mapped RAM Range: 0xB0400000 - 0xBBB00000
+Successfully Mapped RAM Range: 0xC0000000 - 0x280000000
+Loading driver 6C2004EF-4E0E-4BE4-B14C-340EB4AA5891
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AC8B7C0
+Loading driver at 0x0009ABA0000 EntryPoint=0x0009ABB0050 StatusCodeHandlerRuntimeDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AC8B598
+ProtectUefiImage - 0x9AC8B7C0
+  - 0x000000009ABA0000 - 0x0000000000050000
+Loading driver F80697E9-7FD6-4665-8646-88E33EF71DFC
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AC8A040
+Loading driver at 0x0009AC09000 EntryPoint=0x0009AC0A050 SecurityStubDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AC8AD18
+ProtectUefiImage - 0x9AC8A040
+  - 0x000000009AC09000 - 0x000000000000C000
+InstallProtocolInterface: 94AB2F58-1438-4EF1-9152-18941A3A0E68 9AC12018
+InstallProtocolInterface: A46423E3-4617-49F1-B9FF-D1BFA9115839 9AC12010
+InstallProtocolInterface: 15853D7C-3DDF-43E0-A1CB-EBF85B8F872C 9AC12020
+Loading driver 4B28E4C7-FF36-4E10-93CF-A82159E777C5
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AC8A4C0
+Loading driver at 0x0009AB30000 EntryPoint=0x0009AB40050 ResetSystemRuntimeDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AC84E98
+ProtectUefiImage - 0x9AC8A4C0
+  - 0x000000009AB30000 - 0x0000000000060000
+InstallProtocolInterface: 27CFAC88-46CC-11D4-9A38-0090273FC14D 0
+InstallProtocolInterface: 9DA34AE0-EAF9-4BBF-8EC3-FD60226C44BE 9AB60E68
+InstallProtocolInterface: 695D7835-8D47-4C11-AB22-FA8ACCE7AE7A 9AB60E90
+InstallProtocolInterface: 2DF6BA0B-7092-440D-BD04-FB091EC3F3C1 9AB60EB8
+Loading driver CBD2E4D5-7068-4FF5-B462-9822B4AD8D60
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AC84240
+Loading driver at 0x0009AAB0000 EntryPoint=0x0009AAC0104 VariableRuntimeDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AC83018
+ProtectUefiImage - 0x9AC84240
+  - 0x000000009AAB0000 - 0x0000000000060000
+MemoryTypeInfoSecVarCheckLibConstructor()
+VarCheckLibRegisterSetVariableCheckHandler - 0x9AAC1294 Success
+Variable driver will work at emulated non-volatile variable mode!
+Variable driver will work with auth variable format!
+InstallProtocolInterface: CD3D0A05-9E24-437C-A891-1EE053DB7638 9AAE0F78
+InstallProtocolInterface: AF23B340-97B4-4685-8D4F-A3F28169B21D 9AAE10A8
+InstallProtocolInterface: 1E5668E2-8481-11D4-BCF1-0080C73C8881 0
+NOTICE - AuthVariableLibInitialize() returns Unsupported!
+Variable driver will continue to work without auth variable support!
+RecordSecureBootPolicyVarData GetVariable SecureBoot Status E
+InstallProtocolInterface: 6441F818-6362-4E44-B570-7DBA31DD2453 0
+VarCheckLibRegisterSetVariableCheckHandler - 0x9AAC33EC Success
+InstallProtocolInterface: 81D1675C-86F6-48DF-BD95-9A6E4F0925C3 9AAE10F0
+Loading driver F099D67F-71AE-4C36-B2A3-DCEB0EB2B7D8
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AC83240
+Loading driver at 0x0009AC02000 EntryPoint=0x0009AC03050 WatchdogTimer.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AC83518
+ProtectUefiImage - 0x9AC83240
+  - 0x000000009AC02000 - 0x0000000000007000
+InstallProtocolInterface: 665E3FF5-46CC-11D4-9A38-0090273FC14D 9AC06040
+Loading driver FCABE6A7-7953-4A84-B7EC-D29E89B62E87
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AC820C0
+Loading driver at 0x0009AA50000 EntryPoint=0x0009AA60050 EmbeddedMonotonicCounter.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AC82918
+ProtectUefiImage - 0x9AC820C0
+  - 0x000000009AA50000 - 0x0000000000050000
+InstallProtocolInterface: 1DA97072-BDDC-4B30-99F1-72A0B56FFF2A 0
+Loading driver 79E4A61C-ED73-4312-94FE-E3E7563362A9
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AC81040
+Loading driver at 0x0009AB29000 EntryPoint=0x0009AB2A050 PrintDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AC81D18
+ProtectUefiImage - 0x9AC81040
+  - 0x000000009AB29000 - 0x0000000000007000
+InstallProtocolInterface: F05976EF-83F1-4F3D-8619-F7595D41E538 9AB2C000
+InstallProtocolInterface: 0CC252D2-C106-4661-B5BD-3147A4F81F92 9AB2C050
+Loading driver 9B680FCE-AD6B-4F3A-B60B-F59899003443
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AC81340
+Loading driver at 0x0009AA31000 EntryPoint=0x0009AA32050 DevicePathDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AC81618
+ProtectUefiImage - 0x9AC81340
+  - 0x000000009AA31000 - 0x0000000000011000
+InstallProtocolInterface: 0379BE4E-D706-437D-B037-EDB82FB772A4 9AA3B000
+InstallProtocolInterface: 8B843E20-8132-4852-90CC-551A4E4A7F1C 9AA3B040
+InstallProtocolInterface: 05C99A21-C70F-4AD2-8A5F-35DF3343F51E 9AA3B050
+Loading driver 6696936D-3637-467C-87CB-14EA8248948C
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AC5C0C0
+Loading driver at 0x0009AA46000 EntryPoint=0x0009AA47050 SimpleTextInOutSerial.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AC5CA98
+ProtectUefiImage - 0x9AC5C0C0
+  - 0x000000009AA46000 - 0x000000000000A000
+InstallProtocolInterface: 387477C1-69C7-11D2-8E39-00A0C969723B 9AA4DE90
+InstallProtocolInterface: 387477C2-69C7-11D2-8E39-00A0C969723B 9AA4DEE0
+InstallProtocolInterface: 09576E91-6D3F-11D2-8E39-00A0C969723B 9AA4DEA8
+Loading driver F9D88642-0737-49BC-81B5-6889CD57D9EA
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AC5BBC0
+Loading driver at 0x0009AA27000 EntryPoint=0x0009AA28050 SmbiosDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AC5BA98
+ProtectUefiImage - 0x9AC5BBC0
+  - 0x000000009AA27000 - 0x000000000000A000
+InstallProtocolInterface: 03583FF6-CB36-4940-947E-B9B39F4AFAF7 9AA2E130
+Loading driver 50A15B6F-E3A9-4192-9640-369CB367C4DE
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AC5B1C0
+Loading driver at 0x0009AB20000 EntryPoint=0x0009AB21050 SmBiosTableDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AC5B518
+ProtectUefiImage - 0x9AC5B1C0
+  - 0x000000009AB20000 - 0x0000000000009000
+Failed to Locate Clock Protocol! Status = Not Found
+Failed to Locate DDR Info Protocol! Status = Not Found
+Failed to Locate Chip Info Protocol! Status = Not Found
+PlatformUpdateSmBiosType1: Failed to get Chip ID String! Status = Not Ready
+PlatformUpdateSmBiosType4: Failed to get Cluster 2 Speeds! Status = Not Ready
+PlatformUpdateSmBiosType17: Failed to get DDR Details! Status = Not Ready
+PlatformUpdateSmBiosType17: Failed to get DDR Speeds! Status = Not Ready
+SmbiosAdd: Smbios type 0 with size 0x3B is added to 32-bit table
+SmbiosAdd: Smbios type 0 with size 0x3B is added to 64-bit table
+SmbiosCreateTable: Initialize 32-bit entry point structure
+SmbiosCreateTable() re-allocate SMBIOS 32-bit table
+SmbiosCreateTable: Initialize 64-bit entry point structure
+SmbiosCreate64BitTable() re-allocate SMBIOS 64-bit table
+SmbiosAdd: Smbios type 1 with size 0x67 is added to 32-bit table
+SmbiosAdd: Smbios type 1 with size 0x67 is added to 64-bit table
+SmbiosAdd: Smbios type 2 with size 0x55 is added to 32-bit table
+SmbiosAdd: Smbios type 2 with size 0x55 is added to 64-bit table
+SmbiosAdd: Smbios type 3 with size 0x4A is added to 32-bit table
+SmbiosAdd: Smbios type 3 with size 0x4A is added to 64-bit table
+SmbiosAdd: Smbios type 7 with size 0x31 is added to 32-bit table
+SmbiosAdd: Smbios type 7 with size 0x31 is added to 64-bit table
+SmbiosAdd: Smbios type 7 with size 0x2A is added to 32-bit table
+SmbiosAdd: Smbios type 7 with size 0x2A is added to 64-bit table
+SmbiosAdd: Smbios type 7 with size 0x2D is added to 32-bit table
+SmbiosAdd: Smbios type 7 with size 0x2D is added to 64-bit table
+SmbiosAdd: Smbios type 7 with size 0x2D is added to 32-bit table
+SmbiosAdd: Smbios type 7 with size 0x2D is added to 64-bit table
+SmbiosAdd: Smbios type 4 with size 0x99 is added to 32-bit table
+SmbiosAdd: Smbios type 4 with size 0x99 is added to 64-bit table
+SmbiosAdd: Smbios type 16 with size 0x19 is added to 32-bit table
+SmbiosAdd: Smbios type 16 with size 0x19 is added to 64-bit table
+SmbiosAdd: Smbios type 17 with size 0xC7 is added to 32-bit table
+SmbiosAdd: Smbios type 17 with size 0xC7 is added to 64-bit table
+SmbiosAdd: Smbios type 19 with size 0x21 is added to 32-bit table
+SmbiosAdd: Smbios type 19 with size 0x21 is added to 64-bit table
+Loading driver 75CA63AD-FBAE-4A06-92A0-F937C671251D
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AC1C240
+Loading driver at 0x0009AA1F000 EntryPoint=0x0009AA20050 UniXNURamDiskDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AC1C918
+ProtectUefiImage - 0x9AC1C240
+  - 0x000000009AA1F000 - 0x0000000000008000
+UNIXNURAMDISK: device tree at 0xA0C0D000, 845892 bytes
+UNIXNURAMDISK: initrd 0xA0E0E000-0xAFFFEABB rounded to 0xF1F0C00 bytes
+InstallProtocolInterface: 09576E91-6D3F-11D2-8E39-00A0C969723B 9AA24068
+InstallProtocolInterface: 964E5B21-6459-11D2-8E39-00A0C969723B 9AA24080
+UNIXNURAMDISK: initrd block device 0xA0E0E000 size 0xF1F0ABB Success
+InstallProtocolInterface: 09576E91-6D3F-11D2-8E39-00A0C969723B 9AA241C8
+InstallProtocolInterface: 964E5B21-6459-11D2-8E39-00A0C969723B 9AA240B0
+UNIXNURAMDISK: FAT child offset 0x11F0ABB size 0xE000000 Success
+Loading driver 8D4E7F50-3A2C-4C9A-9E1B-50C4C8472D41
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AC1B0C0
+Loading driver at 0x0009AA0A000 EntryPoint=0x0009AA0B050 AdvancedLogDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AC1B318
+ProtectUefiImage - 0x9AC1B0C0
+  - 0x000000009AA0A000 - 0x000000000000C000
+Advanced Logger Info = 9AF0A000, Min = 9AF0A058, Max = 9B30A000
+InstallProtocolInterface: 1A9B2C4D-5E6F-4789-ABCD-EF123456789A 9AA13030
+Loading driver EBF342FE-B1D3-4EF8-957C-8048606FF671
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AC1B440
+Loading driver at 0x0009A9D4000 EntryPoint=0x0009A9D5050 SetupBrowser.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AC1AE18
+ProtectUefiImage - 0x9AC1B440
+  - 0x000000009A9D4000 - 0x000000000001D000
+InstallProtocolInterface: B9D4C360-BCFB-4F9B-9298-53C136982258 9A9EE1D0
+InstallProtocolInterface: A770C357-B693-4E6D-A6CF-D21C728E550B 9A9EE200
+InstallProtocolInterface: 1F73B18D-4630-43C1-A1DE-6F80855D7DA4 9A9EE1E0
+Loading driver 42857F0A-13F2-4B21-8A23-53D3F714B840
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AC1A2C0
+Loading driver at 0x0009A980000 EntryPoint=0x0009A990050 CapsuleRuntimeDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AC19E98
+ProtectUefiImage - 0x9AC1A2C0
+  - 0x000000009A980000 - 0x0000000000050000
+InstallProtocolInterface: 5053697E-2CBC-4819-90D9-0580DEEE5754 0
+Loading driver B336F62D-4135-4A55-AE4E-4971BBF0885D
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AC191C0
+Loading driver at 0x0009A920000 EntryPoint=0x0009A930050 RealTimeClock.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AC19518
+ProtectUefiImage - 0x9AC191C0
+  - 0x000000009A920000 - 0x0000000000050000
+InitializeRealTimeClock: using default timezone/daylight settings
+InstallProtocolInterface: 27CFAC87-46CC-11D4-9A38-0090273FC14D 0
+OnRealTimeClockArchNotification: getting real time
+Loading driver 6D33944A-EC75-4855-A54D-809C75241F6C
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AC18140
+Loading driver at 0x0009A857000 EntryPoint=0x0009A858050 BdsDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AC18A98
+ProtectUefiImage - 0x9AC18140
+  - 0x000000009A857000 - 0x0000000000060000
+PrepareRfsProtection: Failed to Locate SCM Protocol! Status = Not Found
+InstallProtocolInterface: 665E3FF6-46CC-11D4-9A38-0090273FC14D 9A8B40D8
+Loading driver 29B950CF-586D-49EA-9D71-F88645CCDAF6
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AC15040
+Loading driver at 0x0009AA18000 EntryPoint=0x0009AA19050 UniXNUDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AC15D98
+ProtectUefiImage - 0x9AC15040
+  - 0x000000009AA18000 - 0x0000000000007000
+UniXNUDxe: Boot0000 first in BootOrder: Success
+Loading driver 6B38F7B4-AD98-40E9-9093-ACA2B5A253C4
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AC153C0
+Loading driver at 0x0009A901000 EntryPoint=0x0009A902050 DiskIoDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AC15A98
+ProtectUefiImage - 0x9AC153C0
+  - 0x000000009A901000 - 0x000000000000B000
+InstallProtocolInterface: 18A031AB-B443-4D1A-A5C0-0C09261E9F71 9A909E60
+Loading driver 1FA1F39E-FEFF-4AAE-BD7B-38A070A3B609
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AC01040
+Loading driver at 0x0009A8EA000 EntryPoint=0x0009A8EB050 PartitionDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AC01D18
+ProtectUefiImage - 0x9AC01040
+  - 0x000000009A8EA000 - 0x000000000000D000
+InstallProtocolInterface: 18A031AB-B443-4D1A-A5C0-0C09261E9F71 9A8F4EB0
+Loading driver CD3BAFB6-50FB-4FE8-8E4E-AB74D2C1A600
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AC019C0
+Loading driver at 0x0009A8F7000 EntryPoint=0x0009A8F8050 EnglishDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AC01818
+ProtectUefiImage - 0x9AC019C0
+  - 0x000000009A8F7000 - 0x000000000000A000
+InstallProtocolInterface: A4C751FC-23AE-4C3E-92E9-4964CF63F349 9A8FDE20
+Loading driver 961578FE-B6B7-44C3-AF35-6BC705CD2B1F
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AA45040
+Loading driver at 0x0009A8CA000 EntryPoint=0x0009A8CB1DC Fat.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AA45D98
+ProtectUefiImage - 0x9AA45040
+  - 0x000000009A8CA000 - 0x0000000000012000
+InstallProtocolInterface: 18A031AB-B443-4D1A-A5C0-0C09261E9F71 9A8D8F28
+Loading driver 1B64AF87-8415-4B57-9B16-680D70913B9F
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AA453C0
+Loading driver at 0x0009A8BB000 EntryPoint=0x0009A8BC050 DarwinBoot.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AA45618
+ProtectUefiImage - 0x9AA453C0
+  - 0x000000009A8BB000 - 0x000000000000F000
+InstallProtocolInterface: 0F0A492E-5A6A-49F6-A1BF-743C87AB1CFE 9A8C7E40
+DARWINBOOT: loader v2 installed EL1
+Loading driver B8E62775-BB0A-43F0-A843-5BE8B14F8CCD
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AA44040
+Loading driver at 0x0009A8E0000 EntryPoint=0x0009A8E1050 BootGraphicsResourceTableDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AA44D98
+ProtectUefiImage - 0x9AA44040
+  - 0x000000009A8E0000 - 0x000000000000A000
+InstallProtocolInterface: CDEA2BD3-FC25-4C1C-B97C-B31186064990 9A8E7E10
+InstallProtocolInterface: 4B5DC1DF-1EAA-48B2-A7E9-EAC489A00B5C 9A8E7E18
+Loading driver D4EA91DC-08D9-47B0-AC74-9381899A4807
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9AA444C0
+Loading driver at 0x0009A832000 EntryPoint=0x0009A833070 ElishLoaderProbeDxe.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9AA44818
+ProtectUefiImage - 0x9AA444C0
+  - 0x000000009A832000 - 0x000000000001C000
+ELISH_LOADER_PROBE: initrd start=0xA0E0E000 bytes=0xF1F0ABB head=1F 8B 08 00 00 00 00 00 00 03 EC
+ELISH_LOADER_PROBE: FAT boot sector offset=0x11F0ABB aligned512=0
+ELISH_LOADER_PROBE: armed 20 seconds, loader revision=0x20000; run-kernel=0
+[Bds] Entry...
+Variable Driver Auto Update Lang, Lang:eng, PlatformLang:en Status: Success
+DXE - Total Runtime Image Count: 0x9
+DXE - Dump Runtime Image Records:
+RealTimeClock.efi: 0x9A920000 - 0x9A970000
+  Code Section: 0x9A930000 - 0x9A940000
+CapsuleRuntimeDxe.efi: 0x9A980000 - 0x9A9D0000
+  Code Section: 0x9A990000 - 0x9A9A0000
+EmbeddedMonotonicCounter.efi: 0x9AA50000 - 0x9AAA0000
+  Code Section: 0x9AA60000 - 0x9AA70000
+VariableRuntimeDxe.efi: 0x9AAB0000 - 0x9AB10000
+  Code Section: 0x9AAC0000 - 0x9AAD0000
+ResetSystemRuntimeDxe.efi: 0x9AB30000 - 0x9AB90000
+  Code Section: 0x9AB40000 - 0x9AB50000
+StatusCodeHandlerRuntimeDxe.efi: 0x9ABA0000 - 0x9ABF0000
+  Code Section: 0x9ABB0000 - 0x9ABC0000
+RuntimeDxe.efi: 0x9ACC0000 - 0x9AD20000
+  Code Section: 0x9ACD0000 - 0x9ACE0000
+ReportStatusCodeRouterRuntimeDxe.efi: 0x9B330000 - 0x9B390000
+  Code Section: 0x9B340000 - 0x9B350000
+EnvDxe.efi: 0x9B397000 - 0x9B3A7000
+  Code Section: 0x9B398000 - 0x9B3A4000
+[Variable]END_OF_DXE is signaled
+Initialize variable error flag (FF)
+Bds: BootOptionSupport NV variable forbids starting the hotkey service.
+InstallProtocolInterface: D3B36F2C-D551-11D4-9A46-0090273FC14D 0
+InstallProtocolInterface: D3B36F2D-D551-11D4-9A46-0090273FC14D 0
+InstallProtocolInterface: 9042A9DE-23DC-4A38-96FB-7ADED080516A 9AC68058
+MaxMode:0x1 
+Mode:0x0 
+SizeOfInfo:0x24 
+FrameBufferBase:0x9C000000 
+FrameBufferSize:0xFA0000 
+Version:0x0 
+HorizontalResolution:0x640 
+VerticalResolution:0xA00 
+PixelFormat:0x1 
+PixelsPerScanLine:0x640 
+Coloring Background to color 0x0. Status: Success 
+On Screen Notifications: 
+Bmp Support: Allocating 0x57E40 bytes of memory
+BmpHeader->ImageOffset 0x436
+BmpHeader->PixelWidth 0x12C
+BmpHeader->PixelHeight 0x12C
+BmpHeader->BitPerPixel 0x8
+BmpHeader->ImageSize 0x15F90
+BmpHeader->HeaderSize 0x28
+BmpHeader->Size 0x163C6
+SetupKeypad: Failed to Locate STI Device Path! Status = Not Found
+[Bds]OsIndication: 0000000000000000
+[Bds]=============Begin Load Options Dumping ...=============
+  Driver Options:
+  SysPrep Options:
+  Boot Options:
+    Boot0000: UniXNU 		 0x0001
+    Boot0001: Internal Storage 		 0x0001
+    Boot0002: USB Storage 		 0x0001
+    Boot0003: FFU Mode 		 0x0008
+    Boot0004: Mass Storage 		 0x0008
+  PlatformRecovery Options:
+[Bds]=============End Load Options Dumping=============
+[Bds]BdsWait ...Zzzzzzzzzzzz...
+[Bds]BdsWait(3)..Zzzz...
+[Bds]BdsWait(2)..Zzzz...
+[Bds]BdsWait(1)..Zzzz...
+[Bds]Exit the waiting!
+SecurityLock::LockType: SOFTWARE_LOCK, Module: CBD2E4D5-7068-4FF5-B462-9822B4AD8D60, Function: LockVariablePolicy, Output: VariablePolicy Lock
+Memory  Previous  Current   Minimum    Next
+ Type    Pages     Pages     Pages     Pages
+======  ========  ========  ========  =======
+  09    00000000  00000000  00000000  00000000
+  0A    00000000  00000000  00000000  00000000
+  00    00000000  00000400  00000000  00000500
+  06    0000012C  00000034  00000000  00000041
+  05    00000096  00000350  00000000  00000424
+Memory Type Information settings change.
+[Bds]Booting UniXNU
+[Bds] Expand Fv(B5A92E3C-AB92-4731-AC72-448CCDBAB0AC)/FvFile(9B665204-A133-47A2-9396-9E2B370A4E25) -> Fv(B5A92E3C-AB92-4731-AC72-448CCDBAB0AC)/FvFile(9B665204-A133-47A2-9396-9E2B370A4E25)
+InstallProtocolInterface: 5B1B31A1-9562-11D2-8E3F-00A0C969723B 9A8DFAC0
+Loading driver at 0x0009A737000 EntryPoint=0x0009A738050 UniXNU.efi
+InstallProtocolInterface: BC62157E-3E33-4FEC-9920-2D3B36D750DF 9A8DFD18
+ProtectUefiImage - 0x9A8DFAC0
+  - 0x000000009A737000 - 0x000000000001C000
+UNIXNU: UniXNU 0.1.0 starting as firmware boot option, firmware Project Silicium rev 0x10000
+InstallProtocolInterface: CE345171-BA0B-11D2-8E4F-00A0C969723B 9AA429A0
+ BlockSize : 512 
+ LastBlock : 78F85 
+InstallProtocolInterface: CE345171-BA0B-11D2-8E4F-00A0C969723B 9AA420A0
+ BlockSize : 512 
+ LastBlock : 6FFFF 
+PartitionValidMbr: Bad MBR partition size EndingLBA(7037F) > LastLBA(6FFFF)
+InstallProtocolInterface: 964E5B22-6459-11D2-8E39-00A0C969723B 9A75E030
+Installed Fat filesystem on 9AC1B018
+FSOpen: Open '\EFI\UniXNU\unixnu.toml' Success
+UNIXNU: config: loaded \EFI\UniXNU\unixnu.toml
+UNIXNU: config: 4 entries, 0 drivers, 0 dt patches, 0 acpi tables, 0 slices, 0 kits loaded, 0 skipped
+UNIXNU: ui: graphics 1600x2560, scale 5, portrait layout
+UNIXNU: menu: shown 4 entries, default 0 'xnu', timeout 3000 ms, input yes, rotate 0 ms
+UNIXNU: menu: timeout, booting default 0
+UNIXNU: boot: entry 'xnu' (elish iPadOS 17.7.11 Apple Restore)
+FSOpen: Open '\EFI\UniXNU\Payloads\scratch-data.img' Success
+UNIXNU: xnu: handing off 0 staged kext(s) to loader
+ELISH_LOADER_PROBE: DarwinBoot request=9FFCE6C0
+ELISH_LOADER_PROBE: volume=9AC1B018 kernel=\EFI\UniXNU\Payloads\kernel.macho args=rd=md0-ramblock -v serial=3 debug=0x14e kt_fixed_zones=120 armcpu-diagnostics=1 -no_slto_panic ml-timeout-lock-panic-scale=40
+ELISH_LOADER_PROBE: initrd=277CEB018 bytes=0x8314200 fdt=0 bytes=0x0 kexts=0
+ELISH_UFS_CLOCK_PROBE: GCC UFS clocks mapped base=0x100000 bytes=0x78000 type=1
+ELISH_UFS_CLOCK_PROBE: UFS Host mapped base=0x1D84000 bytes=0x3000 type=1
+ELISH_UFS_CLOCK_PROBE: UFS PHY mapped base=0x1D87000 bytes=0x1000 type=1
+ELISH_UFS_CLOCK_PROBE: UFS ICE mapped base=0x1D90000 bytes=0x8000 type=1
+ELISH_UFS_CLOCK_PROBE: GCC snapshot; UFS HCI reads require the UFS GDSC and core/interface clocks
+ELISH_UFS_CLOCK_PROBE: branch core_clk offset=0x77010 value=0x00000221 enable=1 hwcg=0
+ELISH_UFS_CLOCK_PROBE: branch iface_clk offset=0x77018 value=0x00000001 enable=1 hwcg=0
+ELISH_UFS_CLOCK_PROBE: branch tx_lane0_sync_clk offset=0x7701C value=0x00000001 enable=1 hwcg=0
+ELISH_UFS_CLOCK_PROBE: branch rx_lane0_sync_clk offset=0x77020 value=0x00000001 enable=1 hwcg=0
+ELISH_UFS_CLOCK_PROBE: branch core_clk_unipro offset=0x7705C value=0x00000221 enable=1 hwcg=0
+ELISH_UFS_CLOCK_PROBE: branch core_clk_ice offset=0x77064 value=0x00000221 enable=1 hwcg=0
+ELISH_UFS_CLOCK_PROBE: branch ref_aux_clk offset=0x7709C value=0x00000001 enable=1 hwcg=0
+ELISH_UFS_CLOCK_PROBE: branch rx_lane1_sync_clk offset=0x770B8 value=0x00000001 enable=1 hwcg=0
+ELISH_UFS_CLOCK_PROBE: branch bus_aggr_clk offset=0x770CC value=0x00000001 enable=1 hwcg=0
+ELISH_UFS_CLOCK_PROBE: RCG core_clk command-register offset=0x77024 value=0x00000000
+ELISH_UFS_CLOCK_PROBE: RCG core_clk_ice command-register offset=0x7706C value=0x00000000
+ELISH_UFS_CLOCK_PROBE: RCG core_clk_unipro command-register offset=0x77084 value=0x00000000
+ELISH_UFS_CLOCK_PROBE: RCG ref_aux_clk command-register offset=0x770A0 value=0x00000000
+ELISH_UFS_CLOCK_PROBE: UFS core-reset register offset=0x77000 raw=0x00000000
+ELISH_UFS_CLOCK_PROBE: UFS PHY GDSC offset=0x77004 raw=0xF822F000 powered=1
+ELISH_UFS_CLOCK_PROBE: core reset deasserted, GDSC and HCI clock gates on
+ELISH_UFS_CLOCK_PROBE: UFS Host mapped base=0x1D84000 bytes=0x3000 type=1
+ELISH_UFS_HOST_PROBE: read-only UFSHCI status and queue registers; no list memory access or command submission
+ELISH_UFS_HOST_PROBE: reading CAP offset=0x0
+ELISH_UFS_HOST_PROBE: CAP value=0x1587031F
+ELISH_UFS_HOST_PROBE: reading VER offset=0x8
+ELISH_UFS_HOST_PROBE: VER value=0x00000300
+ELISH_UFS_HOST_PROBE: reading IS offset=0x20
+ELISH_UFS_HOST_PROBE: IS value=0x00000400
+ELISH_UFS_HOST_PROBE: reading HCS offset=0x30
+ELISH_UFS_HOST_PROBE: HCS value=0x0000010F
+ELISH_UFS_HOST_PROBE: reading HCE offset=0x34
+ELISH_UFS_HOST_PROBE: HCE value=0x00000001
+ELISH_UFS_HOST_PROBE: reading UTRLBA offset=0x50
+ELISH_UFS_HOST_PROBE: UTRLBA value=0x9B145000
+ELISH_UFS_HOST_PROBE: reading UTRLBAU offset=0x54
+ELISH_UFS_HOST_PROBE: UTRLBAU value=0x00000000
+ELISH_UFS_HOST_PROBE: reading UTRLDBR offset=0x58
+ELISH_UFS_HOST_PROBE: UTRLDBR value=0x00000000
+ELISH_UFS_HOST_PROBE: reading UTRLRSR offset=0x60
+ELISH_UFS_HOST_PROBE: UTRLRSR value=0x00000001
+ELISH_UFS_HOST_PROBE: reading UTMRLBA offset=0x70
+ELISH_UFS_HOST_PROBE: UTMRLBA value=0x9B146000
+ELISH_UFS_HOST_PROBE: reading UTMRLBAU offset=0x74
+ELISH_UFS_HOST_PROBE: UTMRLBAU value=0x00000000
+ELISH_UFS_HOST_PROBE: reading UTMRLDBR offset=0x78
+ELISH_UFS_HOST_PROBE: UTMRLDBR value=0x00000000
+ELISH_UFS_HOST_PROBE: reading UTMRLRSR offset=0x80
+ELISH_UFS_HOST_PROBE: UTMRLRSR value=0x00000000
+ELISH_UFS_HOST_PROBE: status read complete; no UFS command, DMA or write issued
+ELISH_IORT_PROBE: IORT table not present in ACPI configuration
+ELISH_SMMU_PROBE: region base=0x15000000 bytes=0xD0000 type=1
+ELISH_SMMU_PROBE: sCR0=0x00270406 clientpd=0 unmatched-fault-config=1
+ELISH_SMMU_PROBE: ID0=0x4C017E57 ID1=0x6000004A
+ELISH_SMMU_PROBE: ID2=0x00005111
+ELISH_SMMU_PROBE: stream groups=87; read-only scan begins
+ELISH_SMMU_PROBE: reading group 0
+ELISH_SMMU_PROBE: reading group 1
+ELISH_SMMU_PROBE: reading group 2
+ELISH_SMMU_PROBE: group=2 SMR=0x800004E0 SID=0x4E0 mask=0x0 S2CR=0x00000002 type=0 cb=2
+ELISH_SMMU_PROBE: cb=2 cbar=0x0001F000 sctlr=0x000000E0 ttbr0=0x0000000000000000 tcr=0x00000000 fsr=0x00000400
+ELISH_SMMU_PROBE: reading group 3
+ELISH_SMMU_PROBE: group=3 SMR=0x800000E0 SID=0xE0 mask=0x0 S2CR=0x00000003 type=0 cb=3
+ELISH_SMMU_PROBE: cb=3 cbar=0x0001F000 sctlr=0x000000E0 ttbr0=0x0000000000000000 tcr=0x00000000 fsr=0x00000400
+ELISH_SMMU_PROBE: reading group 4
+ELISH_SMMU_PROBE: group=4 SMR=0x84020820 SID=0x820 mask=0x402 S2CR=0x00000004 type=0 cb=4
+ELISH_SMMU_PROBE: cb=4 cbar=0x0001F000 sctlr=0x000000E0 ttbr0=0x0000000000000000 tcr=0x00000000 fsr=0x00000400
+ELISH_SMMU_PROBE: reading group 5
+ELISH_SMMU_PROBE: reading group 6
+ELISH_SMMU_PROBE: reading group 7
+ELISH_SMMU_PROBE: reading group 8
+ELISH_SMMU_PROBE: reading group 9
+ELISH_SMMU_PROBE: reading group 10
+ELISH_SMMU_PROBE: reading group 11
+ELISH_SMMU_PROBE: reading group 12
+ELISH_SMMU_PROBE: reading group 13
+ELISH_SMMU_PROBE: reading group 14
+ELISH_SMMU_PROBE: reading group 15
+ELISH_SMMU_PROBE: reading group 16
+ELISH_SMMU_PROBE: reading group 17
+ELISH_SMMU_PROBE: reading group 18
+ELISH_SMMU_PROBE: reading group 19
+ELISH_SMMU_PROBE: reading group 20
+ELISH_SMMU_PROBE: reading group 21
+ELISH_SMMU_PROBE: reading group 22
+ELISH_SMMU_PROBE: reading group 23
+ELISH_SMMU_PROBE: reading group 24
+ELISH_SMMU_PROBE: reading group 25
+ELISH_SMMU_PROBE: reading group 26
+ELISH_SMMU_PROBE: reading group 27
+ELISH_SMMU_PROBE: reading group 28
+ELISH_SMMU_PROBE: reading group 29
+ELISH_SMMU_PROBE: reading group 30
+ELISH_SMMU_PROBE: reading group 31
+ELISH_SMMU_PROBE: reading group 32
+ELISH_SMMU_PROBE: reading group 33
+ELISH_SMMU_PROBE: reading group 34
+ELISH_SMMU_PROBE: reading group 35
+ELISH_SMMU_PROBE: reading group 36
+ELISH_SMMU_PROBE: reading group 37
+ELISH_SMMU_PROBE: reading group 38
+ELISH_SMMU_PROBE: reading group 39
+ELISH_SMMU_PROBE: reading group 40
+ELISH_SMMU_PROBE: reading group 41
+ELISH_SMMU_PROBE: reading group 42
+ELISH_SMMU_PROBE: reading group 43
+ELISH_SMMU_PROBE: reading group 44
+ELISH_SMMU_PROBE: reading group 45
+ELISH_SMMU_PROBE: reading group 46
+ELISH_SMMU_PROBE: reading group 47
+ELISH_SMMU_PROBE: reading group 48
+ELISH_SMMU_PROBE: reading group 49
+ELISH_SMMU_PROBE: reading group 50
+ELISH_SMMU_PROBE: reading group 51
+ELISH_SMMU_PROBE: reading group 52
+ELISH_SMMU_PROBE: reading group 53
+ELISH_SMMU_PROBE: reading group 54
+ELISH_SMMU_PROBE: reading group 55
+ELISH_SMMU_PROBE: reading group 56
+ELISH_SMMU_PROBE: reading group 57
+ELISH_SMMU_PROBE: reading group 58
+ELISH_SMMU_PROBE: reading group 59
+ELISH_SMMU_PROBE: reading group 60
+ELISH_SMMU_PROBE: reading group 61
+ELISH_SMMU_PROBE: reading group 62
+ELISH_SMMU_PROBE: reading group 63
+ELISH_SMMU_PROBE: reading group 64
+ELISH_SMMU_PROBE: reading group 65
+ELISH_SMMU_PROBE: reading group 66
+ELISH_SMMU_PROBE: reading group 67
+ELISH_SMMU_PROBE: reading group 68
+ELISH_SMMU_PROBE: reading group 69
+ELISH_SMMU_PROBE: reading group 70
+ELISH_SMMU_PROBE: reading group 71
+ELISH_SMMU_PROBE: reading group 72
+ELISH_SMMU_PROBE: reading group 73
+ELISH_SMMU_PROBE: reading group 74
+ELISH_SMMU_PROBE: reading group 75
+ELISH_SMMU_PROBE: reading group 76
+ELISH_SMMU_PROBE: reading group 77
+ELISH_SMMU_PROBE: reading group 78
+ELISH_SMMU_PROBE: reading group 79
+ELISH_SMMU_PROBE: reading group 80
+ELISH_SMMU_PROBE: reading group 81
+ELISH_SMMU_PROBE: reading group 82
+ELISH_SMMU_PROBE: reading group 83
+ELISH_SMMU_PROBE: reading group 84
+ELISH_SMMU_PROBE: reading group 85
+ELISH_SMMU_PROBE: reading group 86
+ELISH_SMMU_PROBE: context banks=74; read-only state scan begins
+ELISH_SMMU_PROBE: context-state cb=0 cbar=0x000100FF sctlr=0x000000E0 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=1 cbar=0x000100FF sctlr=0x000000E0 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=2 cbar=0x0001F000 sctlr=0x000000E0 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=3 cbar=0x0001F000 sctlr=0x000000E0 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=4 cbar=0x0001F000 sctlr=0x000000E0 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=5 cbar=0x000100FF sctlr=0x000000E0 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=6 cbar=0x00000000 sctlr=0x20E9A71A ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=7 cbar=0x00000000 sctlr=0x2BDEA31E ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=8 cbar=0x00000000 sctlr=0x055EA71E ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=9 cbar=0x00000000 sctlr=0x26AF871C ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=10 cbar=0x00000000 sctlr=0x162A811E ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=11 cbar=0x00000000 sctlr=0x279B671C ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=12 cbar=0x00000000 sctlr=0x0294230E ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=13 cbar=0x00000000 sctlr=0x2BBAA716 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=14 cbar=0x00000000 sctlr=0x026A611A ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=15 cbar=0x00000000 sctlr=0x167EE71E ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=16 cbar=0x00000000 sctlr=0x3F18651E ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=17 cbar=0x00000000 sctlr=0x3D2B270C ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=18 cbar=0x00000000 sctlr=0x36BC2712 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=19 cbar=0x00000000 sctlr=0x327AC30A ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=20 cbar=0x00000000 sctlr=0x13BBC30A ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=21 cbar=0x00000000 sctlr=0x25766304 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=22 cbar=0x00000000 sctlr=0x23BD6518 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=23 cbar=0x00000000 sctlr=0x1A374716 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=24 cbar=0x00000000 sctlr=0x0975A10C ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=25 cbar=0x00000000 sctlr=0x12A6C110 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=26 cbar=0x00000000 sctlr=0x189F251E ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=27 cbar=0x00000000 sctlr=0x2CA5271C ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=28 cbar=0x00000000 sctlr=0x3A16270A ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=29 cbar=0x00000000 sctlr=0x19452714 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=30 cbar=0x00000000 sctlr=0x1CBD6512 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=31 cbar=0x00000000 sctlr=0x299C2306 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=32 cbar=0x00000000 sctlr=0x011D2114 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=33 cbar=0x00000000 sctlr=0x2ABCC71C ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=34 cbar=0x00000000 sctlr=0x3B8AE71E ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=35 cbar=0x00000000 sctlr=0x3AADE51E ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=36 cbar=0x00000000 sctlr=0x2ABDA30C ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=37 cbar=0x00000000 sctlr=0x161F871A ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=38 cbar=0x00000000 sctlr=0x242F451E ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=39 cbar=0x00000000 sctlr=0x1A6C071E ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=40 cbar=0x00000000 sctlr=0x299EA50E ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=41 cbar=0x00000000 sctlr=0x22CDA704 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=42 cbar=0x00000000 sctlr=0x1596611C ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=43 cbar=0x00000000 sctlr=0x18FBA51A ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=44 cbar=0x00000000 sctlr=0x25A08716 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=45 cbar=0x00000000 sctlr=0x19552712 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=46 cbar=0x00000000 sctlr=0x22674516 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=47 cbar=0x00000000 sctlr=0x3C57A716 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=48 cbar=0x00000000 sctlr=0x20DE250C ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=49 cbar=0x00000000 sctlr=0x3BAD670A ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=50 cbar=0x00000000 sctlr=0x11BBA316 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=51 cbar=0x00000000 sctlr=0x32470716 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=52 cbar=0x00000000 sctlr=0x213FA71C ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=53 cbar=0x00000000 sctlr=0x321AE706 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=54 cbar=0x00000000 sctlr=0x304FA718 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=55 cbar=0x00000000 sctlr=0x12AF470E ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=56 cbar=0x00000000 sctlr=0x1B06A704 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=57 cbar=0x00000000 sctlr=0x28FFA712 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=58 cbar=0x00000000 sctlr=0x251FE71E ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=59 cbar=0x00000000 sctlr=0x396D6702 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=60 cbar=0x00000000 sctlr=0x2AF1A11A ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=61 cbar=0x00000000 sctlr=0x3722A70E ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=62 cbar=0x00000000 sctlr=0x0199250A ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=63 cbar=0x00000000 sctlr=0x11572510 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=64 cbar=0x00000000 sctlr=0x0BF7410E ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=65 cbar=0x00000000 sctlr=0x2AAAA71E ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=66 cbar=0x00000000 sctlr=0x04B42712 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=67 cbar=0x00000000 sctlr=0x15CBA718 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=68 cbar=0x00000000 sctlr=0x2AB5C70E ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=69 cbar=0x00000000 sctlr=0x0AF5C70E ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=70 cbar=0x00000000 sctlr=0x3AB5A71A ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=71 cbar=0x00000000 sctlr=0x3A1FA316 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=72 cbar=0x00000000 sctlr=0x2993E118 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: context-state cb=73 cbar=0x00000000 sctlr=0x0E75A310 ttbr0=0x0000000000000000 tcr=0x00000000
+ELISH_SMMU_PROBE: read-only scan complete
+ELISH_UFS_HANDOFF: reserved arena [0x9A8B8000,0x9A8BB000), address cap 0x100000000, DMA not started
+ELISH_UFS_CLOCK_PROBE: warm restart before DarwinBoot
+RamLog: restarting into fastboot, PON 0x00000000 (warm)

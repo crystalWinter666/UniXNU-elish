@@ -1,5 +1,33 @@
 # UniXNU elish UEFI 移植交接
 
+## 最新交接 · run40 · 2026-11-26
+
+- run40 在 RAM-only elish 启动中复核两条 UFS SMMU 路由，通过数据 PRD `0x9A71B000–0x9A720000` 读取原生 LUN 0。限时 NOP 成功，READ CAPACITY 返回 61,880,320 个 4 KiB 块；已知 LBA 1、主备 GPT 及 header/entries CRC 均通过，`userdata` LBA 边界与 Android 基线一致。
+- 命令完成后 UFS 队列停止、doorbell 为 0，GFSR/FSR2/FSR3 未变化。探针在 DarwinBoot 前 warm-restart，仅发 NOP、READ CAPACITY 和 READ(10)，未写分区。[run40 记录与镜像哈希](reports/elish-run40-ufs-gpt-20261126.md) · [console ramoops](reports/elish-run40-ufs-gpt-console-ramoops-20261126.txt)
+- run40 证明的是 UEFI 的只读 UFS/SMMU/DMA 路径；XNU 尚未接管 UFS，也未读取 OS/SystemOS 或挂载完整 System 根卷。`--ufs-run-kernel` 诊断入口只保留路由并进入 DarwinBoot，不提交 UFS 命令；设备验证待完成。run28 仍是 Restore APFS 根卷 Apple `launchd` PID 1 的回归基线。
+
+## 最新交接 · run34 / run35
+
+- run34 镜像 `run34-android-smmu-diagnostic/boot.img` SHA-256 为 `e6624ee4d4e47f9c6d6c29ad563ae4da1ce207a4790509c6be188a12c8e8488d`。核验 elish 后 RAM-only 启动获得 `Sending OKAY` / `Booting OKAY`。USB 随后断开，reader 等待序列号超时，未回收日志。该内核的内建驱动可在 PID 1 前改写 SMMU 状态或启动 UFS DMA，实机是否执行到该阶段未知。停止使用此镜像。[run34 记录](reports/elish-run34-android-kernel-20261126.md)
+- run35 镜像 `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run35-ufs-queues-readonly/boot.img` SHA-256 为 `bfca4d3e00af3ace7808d6f9f2be5213c90aac745983a92ba322086ca24880a7`。固件编译、板级 preflight 和封装通过。run35 验证 core reset 已释放且电源、时钟有效后，仅读 HCI 状态及请求列表寄存器，然后在 DarwinBoot 前重启。镜像待上机。[run35 记录](reports/elish-run35-ufs-queues-20261126.md)
+- 用户恢复 fastboot 后，serial `4bed07e4`、product `elish`、`is-userspace=no` 均已核验。已校验的 reader 上传在 `Sending` 超时。设备仍枚举，USB reset 和两个 fastboot 客户端均未恢复应答。直接探测确认 `getvar:product` 经 bulk OUT 完整发送，bulk IN 超时。`reboot bootloader` 也超时。重新进入可响应命令的 fastboot 后，先走已验证的 Recovery ADB 路径回收日志，再 RAM-only 启动 run35。最后确认的 iPadOS 检查点仍为 run28 Restore 根卷 Apple PID 1。[传输记录](reports/elish-run34-android-kernel-20261126.md#reader-attempt-after-manual-fastboot-entry)
+- Recovery 与原厂 DT 的 TBU 范围一致。候选 SID `0xE0` 落在 ANOC1，`0x4E0` 落在 ANOC2。两个 TBU 寄存器窗口均在现有 UEFI SMMU 描述符之外。[拓扑核对](reports/elish-ufs-active-firmware-20261125.md#kona-tbu-topology-cross-check--2026-11-26)
+
+## 最新交接 · run33
+
+- run33 RAM-only boot image `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run33-smmu-context-state-readonly/boot.img`，235,528,192 bytes，SHA-256 `c650c13b6bba566b959d32ba2ee0d867300e902069ce2aa725faf0a457673f7c`；UEFI FD SHA-256 `3a9ca3cd64619d9775a5e91905635a74c5e4909b57bc2367c134940b941a2cd5`。确认 serial `4bed07e4`、model `M2105K81AC`、device/product `elish` 后 `fastboot boot` 返回 `Sending OKAY` / `Booting OKAY`；探针随后 warm-restart 到 fastboot。
+- [run33 日志](reports/elish-run33-smmu-context-console-ramoops-20261125.txt)，53,966 bytes，SHA-256 `4a3d2bf2ce1fd4ee98e12ab2ce4d5c1b425a72e70f74dd5ba07a5228344e048b`。活动 ACPI 无 IORT；只发现 group4 SID `0x820`/mask `0x402`/CB4，仍归属 MDSS SDE。CB0–5 有读数；CB6–73 的 SCTLR 原始值带高位非零、解释未明，不能据此分配任何 context bank。
+- stock XBL 内嵌 IORT 表头校验和无效，且不是当前活动 ACPI 表；其中 UFS0 input IDs `0`/`0x10` 映射到 SMMU node `0x30` 的候选 SID `0x4E0`/`0xE0`。Android live FDT 的 apps-SMMU 有 `qcom,skip-init`，匹配 Linux 驱动保留已有 SMR/S2CR/context-bank 状态；这提示 Android 可能使用预置路由，但不证明 UFS SID/context，也不确认 UEFI 状态。stock Android 内核未编入 debugfs，`/dev/mem` 与 SMMU sysfs resource 节点不存在，无法从当前内核只读查看寄存器。候选 SID 不匹配 run33 当前唯一有效的 SMMU group；UFS ARID→live SID、context 所有权和 DMA 范围仍未确认。详见 [run33 报告](reports/elish-run33-smmu-context-20261125.md)。
+- 本轮未发 UFS command/DMA/SMMU write，也未写任何分区。run33 在 DarwinBoot 前停止；最后确认的 XNU/userspace 阶段仍是 run28 Restore APFS root 上 Apple `launchd` PID 1。只读 Android live-FDT 检查发现 UFS 节点没有 `iommus`、`iommu-map`、`dma-ranges` 或 `dma-coherent`；这不证明 UEFI 路由或 bypass。完整 System root、Setup 和持久 Data 未验证。保持 UFS DMA 关闭；先验证 IORT 来源、live UFS route/context 和全 DMA 地址范围。
+- After ADB authorization, bootloader `fetch` proved unsupported; `fastboot reboot recovery` enabled root ADB without flashing. Read-only slot-`_b` exports of `xbl_b`, `xbl_config_b`, `abl_b`, and `imagefv_b` have exact supplied-ROM payload prefixes. This ties the stock-XBL IORT source to the active slot but does not validate its bad-checksum table or a runtime UFS route. Upstream generic SM8250 DTS lists candidate SIDs `0xE0`/`0x4E0`; live UEFI ownership is still unknown. Recovery had no debugfs, `/dev/mem`, SMMU resource files or UFS `iommu_group`. `adb reboot` returned to Android (`sys.boot_completed=1`). Hashes and commands: [firmware readback](reports/elish-ufs-active-firmware-20261125.md).
+- 2026-11-26 read-only Android kernel-log capture: model `M2105K81AC`, `elish`, `sys.boot_completed=1`, kernel `4.19.325-cip136-st20-perf-g6b34d2476532`. `apps-smmu` reports 87 stream-match groups; UFS binds and reaches Gear 4 / two-lane FAST, but unlike other clients has no visible SMMU consumer/group log entry. This does not prove bypass or resolve the UEFI route/context. Full capture hash, command and limitations: [live firmware/UFS report](reports/elish-ufs-active-firmware-20261125.md). Keep DMA disabled.
+- run32 的控制器时钟/HCI 只读结果与命令仍见 [run32 记录](reports/elish-run32-smmu-control-20261125.md)。run28 镜像继续作为 Restore-root 回归基线；[run28 实机画面](reports/elish-run28-launchd-20261125.jpg)。
+
+## 上一交接 · run31
+
+- run31 RAM-only 镜像 `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run31-ufs-host-status-gated/boot.img`，235,528,192 bytes，SHA-256 `fb7d0ea8f68b8716eacc9e2e3eeff3d98ebd584be9ba74ea7dda412f75ce8f5c`；FD SHA-256 `838964f207748cc42db6e1129f81e9e2cb9454a68c8ba128840e7830379aba4c`。第一次上传 240 秒超时；重授权主机 USB `/sys/bus/usb/devices/1-3/authorized` 后，确认 fastboot `product=elish` 并重试，`Sending OKAY` / `Booting OKAY`。设备运行 probe 后 warm-restart 到 fastboot，再 RAM-only boot 已校验的 reader 回收 ramoops。
+- [run31 日志](reports/elish-run31-ufs-hci-console-ramoops-20261125.txt)，45,518 bytes，SHA-256 `b1d4e692456c4f83d3dd59a328d0e5602cf4ce74a06e072f1c6b55c00ee0d20d`。GDSC `0xF822F000`（powered）、core/interface gates enabled；HCI CAP `0x1587031F`、VER `0x300`、IS `0x400`、HCS `0x10F`、HCE `1`。GCC core-BCR raw `0`（未解释极性）；PHY/ICE registers 未读。无 UFS command/DMA/分区写入。
+- ACPI 无 IORT；SMMU group4 SID `0x820`/mask `0x402`/CB4 对应 live FDT MDSS SDE，不是 UFS。UFS SID/context 和 DMA addressability 仍未知。报告含完整 build/fastboot 命令及输入哈希：[run31](reports/elish-run31-ufs-hci-20261125.md)。
 ## 最新交接 · run28
 
 - run24 用户看到绿、蓝、粉三条彩条，随后回到 fastboot。58 秒录像的最后一帧仍是彩条，复位原因未确定。

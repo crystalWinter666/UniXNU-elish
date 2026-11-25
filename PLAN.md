@@ -1,5 +1,39 @@
 # 小米平板 5 Pro（elish）iPadOS 17 移植计划
 
+## 当前检查点 · run40 · 2026-11-26
+
+run40 通过 RAM-only `fastboot boot` 在 elish 上复核 run38 的 UFS SMMU 路由，提交限时 NOP、读取 LUN 0 容量和已知块，并用 DMA 读取主备 GPT。容量为 61,880,320 个 4 KiB 块；已知块、两份 GPT header/entries CRC 及 `userdata` 边界均匹配 Android 基线。DMA PRD 位于 `0x9A71B000–0x9A720000`，完成后队列停止且 SMMU fault 状态未变。[run40 实机记录](reports/elish-run40-ufs-gpt-20261126.md)
+
+这是 UEFI 只读 UFS DMA 路径的实机验证；探针在 DarwinBoot 前重启，尚未验证 XNU UFS 接管、OS/SystemOS 窗口、System APFS 挂载或完整根卷上的 launchd。设备分区未写入。下一步先在只读条件下核验 OS/SystemOS 窗口，再完成 XNU UFS 发布与根卷路径，确认 UUID `04769D26-2CA0-4825-B443-E2E5F88300F2` 和 Apple PID 1；Setup 与 Data 持久化分别验收。任何分区写入须先有明确范围、备份和恢复验证。
+
+## 当前检查点 · run34 / run35 · 2026-11-26
+
+run34 的 RAM-only Android 诊断内核获 fastboot `OKAY`，随后 USB 断开，reader 未能启动。复核发现 Android 的内建 SMMU/UFS probe 可在诊断 PID 1 前改写硬件状态或触发 UFS DMA。本轮没有回收到日志或确认任何新增实机阶段，run34 已停止使用。[run34 记录](reports/elish-run34-android-kernel-20261126.md)
+
+run35 已通过主机构建。它沿用 run33 的 UEFI 只读路径，增加 Kona core reset 检查以及 UFS 请求列表基址、run/stop、doorbell 采样，随后在 DarwinBoot 前重启。平板已进入 fastboot 并核验为 `elish`。Reader 上传超时后，USB bulk OUT 能接收命令，bulk IN 响应超时。run35 待上机。重新进入可响应命令的 fastboot 后，先用 Recovery ADB 查 run34 是否有可回收日志，再验证 run35。UFS stream/context 和完整 DMA 范围仍待确认，后续依次验证受限 NOP、容量、已知块、GPT、OS/SystemOS、目标 UUID `04769D26-2CA0-4825-B443-E2E5F88300F2` 的挂载与 Apple PID 1，另记录 Setup 和 Data 持久化。[run35 记录](reports/elish-run35-ufs-queues-20261126.md)
+
+已在 Recovery 和原厂 DT 核对两个候选 SID 对应的 TBU 范围及 UFS 的 ANOC1 带宽投票路径。还需实测哪条 stream 生效、context 的所有权及 DMA 可达范围。[拓扑核对](reports/elish-ufs-active-firmware-20261125.md#kona-tbu-topology-cross-check--2026-11-26)
+
+## 当前检查点 · run33 · 2026-11-25
+
+run33 RAM-only 镜像 `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run33-smmu-context-state-readonly/boot.img`（SHA-256 `c650c13b6bba566b959d32ba2ee0d867300e902069ce2aa725faf0a457673f7c`）在确认 fastboot `product=elish` 后通过 `fastboot boot`，随后在 DarwinBoot 前 warm-restart。回收的 [run33 ramoops](reports/elish-run33-smmu-context-console-ramoops-20261125.txt)（53,966 bytes，SHA-256 `4a3d2bf2ce1fd4ee98e12ab2ce4d5c1b425a72e70f74dd5ba07a5228344e048b`）记录了只读 SMMU 探针。
+
+活动 ACPI 无 IORT；run33 只发现 group4 SID `0x820`/mask `0x402`/CB4，仍由 live FDT 归属 MDSS SDE。扫描 CB0–5 得到 CBAR/SCTLR 值；CB6–73 的 SCTLR 返回高位非零原始值，无法据此判断可用性或所有权。stock XBL 内嵌 IORT（校验和无效，非运行时表）将 UFS0 input IDs `0`/`0x10` 映射到候选 SID `0x4E0`/`0xE0`，但它们不匹配当前唯一有效的 group4；SMMU context/DMA 路由仍未确认，UFS 命令和 DMA 保持关闭。Android live FDT 未给 UFS 节点声明 `iommus`、`iommu-map`、`dma-ranges` 或 `dma-coherent`，但 apps-SMMU 有 `qcom,skip-init`；匹配 Linux 驱动保留已有 SMR/S2CR/context-bank 状态，提示 Android 可能使用预置路由但未标识 UFS SID/context。当前 Android 内核未编入 debugfs、`/dev/mem` 与 SMMU sysfs resource 节点均不存在，无法从现有 Android 环境只读导出该状态。[run33 分析](reports/elish-run33-smmu-context-20261125.md)
+Recovery ADB after user authorization showed root on `M2105K81AC`/`elish`, slot `_b`. `fastboot fetch` is unsupported, but the active `xbl_b`, `xbl_config_b`, `abl_b`, and `imagefv_b` exports have ROM payload prefixes that match byte-for-byte. The active XBL therefore contains the stock-IORT source payload; that table still has an invalid checksum and run33 active ACPI has no IORT. Upstream generic SM8250 DTS gives candidate UFS SIDs `0xE0`/`0x4E0`, not a validated elish runtime route. Recovery still lacks debugfs, `/dev/mem`, SMMU resource files, and a UFS `iommu_group`. Android was rebooted back to `sys.boot_completed=1`; the only I/O was OS-managed firmware block reads, with no native UniXNU UFS diagnostic command, manually programmed DMA, SMMU write, or persistent partition write. [Readback details](reports/elish-ufs-active-firmware-20261125.md).
+2026-11-26 Android kernel-log cross-check: `apps-smmu` reports 87 stream-match groups and other clients log IOMMU attachment/group creation; UFS is bound and reaches Gear 4 / two-lane FAST, but has no visible SMMU-consumer/group entry. This adds no proof of bypass or a live UEFI route; ARID/SID, context ownership and DMA range remain unverified. Capture details and hash: [UFS/SMMU report](reports/elish-ufs-active-firmware-20261125.md). Keep DMA disabled.
+
+
+最后确认的 XNU checkpoint 仍为 run28 Restore 根卷上的 Apple `launchd` PID 1。run33 在 DarwinBoot 前停止；本轮 Recovery 只通过 Linux UFS 驱动读取固件分区，没有发 native UFS 诊断命令、手工 DMA、SMMU 写入或分区写入。完整 System 根卷、Setup 和 Data 仍未验证。活动 slot-B XBL payload 与提供的 ROM 前缀完全一致，但 IORT 校验和无效且 run33 活动 ACPI 无 IORT。下一步通过只读 UEFI/HALIOMMU 路径确定 live UFS route、context ownership 和 DMA 地址范围；不能直接采用候选 SID。
+
+## 前一检查点 · run32 · 2026-11-25
+
+run32 只读确认 apps-SMMU `sCR0=0x00270406`（`CLIENTPD=0`、`USFCFG=1`），并复现 UFS PHY GDSC powered、core/interface 时钟门打开和 HCI 状态可读。完整命令、输入及日志见 [run32 记录](reports/elish-run32-smmu-control-20261125.md)。
+
+## 前一检查点 · run31 · 2026-11-25
+
+run31 只读确认 UFS PHY GDSC、core/interface 时钟门和 HCI CAP/VER/IS/HCS/HCE；core BCR raw 为 `0`，未解释 reset 极性。PHY/ICE 未读，未发命令或 DMA。详情见 [run31 记录](reports/elish-run31-ufs-hci-20261125.md)。
+
+
 ## 当前检查点 · run28
 
 4 GiB RAM-only run28 从 21H461 Apple Restore APFS 卷启动，实机录像出现第四条青色标记。该探针仅在 PID 1 成功写入 `kern.initproc_spawned=1` 后绘制，确认 Apple `launchd` 已执行到 `main()`。run27 的复位时序也符合恢复根卷挂载成功后的检查点。完整 System 根卷、Setup 和 Data 持久化仍待验证。UFS DMA 保持关闭，待确认 elish stream/context 所有权。[恢复启动记录](reports/elish-restore-root-20261125.md)

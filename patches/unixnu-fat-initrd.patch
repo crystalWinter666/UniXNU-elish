@@ -1,0 +1,303 @@
+diff --git a/docs/porting/uefi-firmware.md b/docs/porting/uefi-firmware.md
+index 50e6179..91761c4 100644
+--- a/docs/porting/uefi-firmware.md
++++ b/docs/porting/uefi-firmware.md
+@@ -69,6 +69,13 @@ The Android bootloader places the FAT payload in RAM and writes `/chosen/linux,i
+ 
+ Mu-Silicium SEC preserves the incoming FDT address as a `UINT64` in the entry-argument HOB (`DAEE82E6-8090-4E72-BFB9-78C13CD4E359`). `UniXNURamDiskDxe` reads this handoff and publishes Block I/O. DiskIoDxe and the FAT driver expose `EFI_SIMPLE_FILE_SYSTEM_PROTOCOL`, allowing UniXNU to read `\EFI\UniXNU\unixnu.toml` and list its entries.
+ 
++Android v3 bootloaders can prepend a gzip vendor ramdisk without sector padding.
++For this layout the driver also publishes a complete, validated FAT32 suffix as
++a read-only relative-offset child. The original initrd disk and FDT range stay
++available for DarwinBoot's input-memory validation. A successful raw block-device
++publication alone does not establish that the payload filesystem was discovered;
++confirm `UNIXNU: config: loaded` and the configured entry in the device log.
++
+ If the menu appears without the configured entries, check:
+ 
+ 1. `boot/boot.json` reports a nonzero `ramdisk_bytes` value.
+diff --git a/docs/zh/porting/uefi-firmware.md b/docs/zh/porting/uefi-firmware.md
+index 01d21b1..c7aef28 100644
+--- a/docs/zh/porting/uefi-firmware.md
++++ b/docs/zh/porting/uefi-firmware.md
+@@ -78,6 +78,12 @@ Mu-Silicium SEC 把传入的 FDT 地址以 `UINT64` 保存到入口参数 HOB（
+ 
+ RAM disk 驱动需要嵌入固件，以便在读取负载配置之前发现负载卷。
+ 
++Android v3 bootloader 可能在 FAT 前直接拼接 gzip vendor ramdisk，不补齐扇区。
++此时驱动额外将完整且通过结构校验的 FAT32 后缀发布为只读子卷，使用按字节描述的
++relative-offset 设备路径。完整 initrd 块设备和 FDT 范围继续供 DarwinBoot 验证输入内存。
++仅有原始块设备发布成功不足以证明已发现负载文件系统；还需从日志确认
++`UNIXNU: config: loaded` 和配置中的启动项。
++
+ ## 必需服务
+ 
+ | 服务 | 使用方 |
+diff --git a/package/UniXNUPkg/Driver/UniXNURamDiskDxe/UniXNURamDiskDxe.c b/package/UniXNUPkg/Driver/UniXNURamDiskDxe/UniXNURamDiskDxe.c
+index 9541009..1b06cb4 100644
+--- a/package/UniXNUPkg/Driver/UniXNURamDiskDxe/UniXNURamDiskDxe.c
++++ b/package/UniXNUPkg/Driver/UniXNURamDiskDxe/UniXNURamDiskDxe.c
+@@ -15,6 +15,7 @@
+ #include <Protocol/BlockIo.h>
+ #include <Protocol/DevicePath.h>
+ #include <Protocol/Decompress.h>
++#include "FatSuffix.h"
+ 
+ // Mu-Silicium SEC stores the incoming x0 value in this HOB as a UINT64.
+ STATIC CONST EFI_GUID mEntryArgHobGuid = {
+@@ -42,6 +43,12 @@ typedef struct {
+   VENDOR_DEVICE_PATH          Vendor;
+   EFI_DEVICE_PATH_PROTOCOL    End;
+ } RAM_BLOCK_DEVICE_PATH;
++
++typedef struct {
++  VENDOR_DEVICE_PATH                       Vendor;
++  MEDIA_RELATIVE_OFFSET_RANGE_DEVICE_PATH  Range;
++  EFI_DEVICE_PATH_PROTOCOL                 End;
++} FAT_BLOCK_DEVICE_PATH;
+ #pragma pack()
+ 
+ STATIC RAM_BLOCK_DEVICE_PATH  mDevicePath = {
+@@ -54,6 +61,9 @@ STATIC RAM_BLOCK_DEVICE_PATH  mDevicePath = {
+ 
+ STATIC UINT8                    *mRamBase;
+ STATIC EFI_BLOCK_IO_MEDIA       mMedia;
++STATIC EFI_BLOCK_IO_MEDIA       mFatMedia;
++STATIC FAT_BLOCK_DEVICE_PATH    mFatDevicePath;
++STATIC UINTN                    mFatOffset;
+ STATIC EFI_DECOMPRESS_PROTOCOL  *mDecompress;
+ STATIC UINTN                    mSourceBytes;
+ STATIC UINT64                   mLogicalBytes;
+@@ -141,7 +151,7 @@ RamBlockRead (
+     return EFI_INVALID_PARAMETER;
+   }
+ 
+-  if (MediaId != mMedia.MediaId) {
++  if (MediaId != This->Media->MediaId) {
+     return EFI_MEDIA_CHANGED;
+   }
+ 
+@@ -149,11 +159,13 @@ RamBlockRead (
+     return EFI_BAD_BUFFER_SIZE;
+   }
+ 
+-  if ((Lba > mMedia.LastBlock) || ((BufferSize / RAM_BLOCK_SIZE) > (mMedia.LastBlock + 1 - Lba))) {
++  if ((Lba > This->Media->LastBlock) || ((BufferSize / RAM_BLOCK_SIZE) > (This->Media->LastBlock + 1 - Lba))) {
+     return EFI_INVALID_PARAMETER;
+   }
+ 
+-  if (mDecompress != NULL) {
++  if (This->Media == &mFatMedia) {
++    CopyMem (Buffer, mRamBase + mFatOffset + Lba * RAM_BLOCK_SIZE, BufferSize);
++  } else if (mDecompress != NULL) {
+     UINT64      Position = Lba * RAM_BLOCK_SIZE;
+     UINTN       Copied = 0;
+     EFI_STATUS  Status;
+@@ -208,6 +220,15 @@ STATIC EFI_BLOCK_IO_PROTOCOL  mBlockIo = {
+   RamBlockFlush
+ };
+ 
++STATIC EFI_BLOCK_IO_PROTOCOL  mFatBlockIo = {
++  EFI_BLOCK_IO_PROTOCOL_REVISION,
++  &mFatMedia,
++  RamBlockReset,
++  RamBlockRead,
++  RamBlockWrite,
++  RamBlockFlush
++};
++
+ STATIC
+ VOID
+ PublishInitrd (
+@@ -223,6 +244,7 @@ PublishInitrd (
+   UINT64      Start;
+   UINT64      End;
+   EFI_HANDLE  Handle;
++  UINT64      FatBytes;
+ 
+   Chosen = FdtPathOffset (Fdt, "/chosen");
+   if (Chosen < 0) {
+@@ -312,6 +334,34 @@ PublishInitrd (
+                   NULL
+                   );
+   DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: initrd block device 0x%lx size 0x%lx %r\n", Start, End - Start, Status));
++  if (EFI_ERROR (Status) || (mDecompress != NULL) ||
++      !FindFatSuffix (mRamBase, mSourceBytes, &mFatOffset, &FatBytes)) {
++    return;
++  }
++
++  // Keep the original disk and FDT range intact for the loader's input-memory
++  // validation. The relative-offset child describes byte offsets, so an
++  // unaligned gzip prefix does not require copying or rounding the FAT base.
++  CopyMem (&mFatMedia, &mMedia, sizeof (mMedia));
++  mFatMedia.LogicalPartition = TRUE;
++  mFatMedia.LastBlock = FatBytes / RAM_BLOCK_SIZE - 1;
++  CopyMem (&mFatDevicePath.Vendor, &mDevicePath.Vendor, sizeof (mDevicePath.Vendor));
++  CopyMem (&mFatDevicePath.End, &mDevicePath.End, sizeof (mDevicePath.End));
++  mFatDevicePath.Range.Header.Type = MEDIA_DEVICE_PATH;
++  mFatDevicePath.Range.Header.SubType = MEDIA_RELATIVE_OFFSET_RANGE_DP;
++  mFatDevicePath.Range.Header.Length[0] = sizeof (mFatDevicePath.Range);
++  mFatDevicePath.Range.StartingOffset = mFatOffset;
++  mFatDevicePath.Range.EndingOffset = mFatOffset + FatBytes - 1;
++  Handle = NULL;
++  Status = gBS->InstallMultipleProtocolInterfaces (
++                  &Handle,
++                  &gEfiDevicePathProtocolGuid,
++                  &mFatDevicePath,
++                  &gEfiBlockIoProtocolGuid,
++                  &mFatBlockIo,
++                  NULL
++                  );
++  DEBUG ((DEBUG_ERROR, "UNIXNURAMDISK: FAT child offset 0x%lx size 0x%lx %r\n", (UINT64)mFatOffset, FatBytes, Status));
+ }
+ 
+ EFI_STATUS
+diff --git a/package/UniXNUPkg/Driver/UniXNURamDiskDxe/UniXNURamDiskDxe.inf b/package/UniXNUPkg/Driver/UniXNURamDiskDxe/UniXNURamDiskDxe.inf
+index 1cf1f5c..9d92de7 100644
+--- a/package/UniXNUPkg/Driver/UniXNURamDiskDxe/UniXNURamDiskDxe.inf
++++ b/package/UniXNUPkg/Driver/UniXNURamDiskDxe/UniXNURamDiskDxe.inf
+@@ -8,6 +8,7 @@
+ 
+ [Sources]
+   UniXNURamDiskDxe.c
++  FatSuffix.h
+ 
+ [Packages]
+   MdePkg/MdePkg.dec
+diff --git a/package/UniXNUPkg/Driver/UniXNURamDiskDxe/FatSuffix.h b/package/UniXNUPkg/Driver/UniXNURamDiskDxe/FatSuffix.h
+new file mode 100644
+--- /dev/null
++++ b/package/UniXNUPkg/Driver/UniXNURamDiskDxe/FatSuffix.h
+@@ -0,0 +1,66 @@
++// SPDX-License-Identifier: BSD-2-Clause-Patent
++// Android v3 bootloaders may prepend a vendor gzip archive to a raw FAT32
++// ramdisk without aligning the concatenation. Only accept a complete FAT32
++// volume that consumes the remaining initrd, with consistent BPB geometry.
++STATIC
++BOOLEAN
++FindFatSuffix (
++  IN CONST UINT8  *Source,
++  IN UINTN        Bytes,
++  OUT UINTN       *Offset,
++  OUT UINT64      *VolumeBytes
++  )
++{
++  UINTN        Position;
++  CONST UINT8  *Boot;
++  UINT32       Sectors;
++  UINT32       FatSectors;
++  UINT32       Reserved;
++  UINT32       ClusterSectors;
++  UINT32       Clusters;
++  UINT32       Root;
++  UINT64       DataStart;
++
++  if ((Bytes < 512) || (Source[0] != 0x1F) || (Source[1] != 0x8B) || (Source[2] != 8)) {
++    return FALSE;
++  }
++
++  for (Position = 1; Position <= Bytes - 512; Position++) {
++    Boot = Source + Position;
++    if (!((Boot[0] == 0xEB && Boot[2] == 0x90) || Boot[0] == 0xE9) ||
++        (Boot[510] != 0x55) || (Boot[511] != 0xAA) ||
++        (ReadUnaligned16 ((CONST UINT16 *)(Boot + 11)) != 512) ||
++        (ReadUnaligned16 ((CONST UINT16 *)(Boot + 17)) != 0) ||
++        (ReadUnaligned16 ((CONST UINT16 *)(Boot + 19)) != 0) ||
++        (ReadUnaligned16 ((CONST UINT16 *)(Boot + 22)) != 0) ||
++        (ReadUnaligned16 ((CONST UINT16 *)(Boot + 42)) != 0) ||
++        ((Boot[16] != 1) && (Boot[16] != 2))) {
++      continue;
++    }
++
++    ClusterSectors = Boot[13];
++    Reserved      = ReadUnaligned16 ((CONST UINT16 *)(Boot + 14));
++    Sectors       = ReadUnaligned32 ((CONST UINT32 *)(Boot + 32));
++    FatSectors    = ReadUnaligned32 ((CONST UINT32 *)(Boot + 36));
++    Root          = ReadUnaligned32 ((CONST UINT32 *)(Boot + 44));
++    DataStart     = Reserved + (UINT64)Boot[16] * FatSectors;
++    if ((ClusterSectors == 0) || (ClusterSectors > 128) ||
++        ((ClusterSectors & (ClusterSectors - 1)) != 0) ||
++        (Reserved == 0) || (FatSectors == 0) || (DataStart >= Sectors) ||
++        ((UINT64)Sectors * 512 != Bytes - Position)) {
++      continue;
++    }
++
++    Clusters = (UINT32)((Sectors - DataStart) / ClusterSectors);
++    if ((Clusters < 65525) || (Clusters > 0x0FFFFFEE) ||
++        ((UINT64)FatSectors * 128 < (UINT64)Clusters + 2) || (Root < 2) || (Root >= Clusters + 2)) {
++      continue;
++    }
++
++    *Offset      = Position;
++    *VolumeBytes = (UINT64)Sectors * 512;
++    return TRUE;
++  }
++
++  return FALSE;
++}
+diff --git a/scripts/test-initrd-fat-suffix.py b/scripts/test-initrd-fat-suffix.py
+new file mode 100644
+--- /dev/null
++++ b/scripts/test-initrd-fat-suffix.py
+@@ -0,0 +1,61 @@
++#!/usr/bin/env python3
++"""Check real FAT32 suffix discovery, unaligned prefixes and malformed geometry."""
++import ctypes
++from pathlib import Path
++import struct
++import subprocess
++import tempfile
++
++root = Path(__file__).resolve().parents[1]
++driver = root / 'package/UniXNUPkg/Driver/UniXNURamDiskDxe'
++with tempfile.TemporaryDirectory(prefix='unixnu-fat-suffix-') as temporary:
++    work = Path(temporary)
++    (work / 'test.c').write_text('''
++#include <stdint.h>
++#include <stddef.h>
++#include <string.h>
++typedef uint8_t UINT8; typedef uint16_t UINT16; typedef uint32_t UINT32; typedef uint64_t UINT64;
++typedef size_t UINTN; typedef int BOOLEAN;
++#define STATIC static
++#define CONST const
++#define IN
++#define OUT
++#define TRUE 1
++#define FALSE 0
++static UINT16 ReadUnaligned16(const UINT16 *p) { UINT16 v; memcpy(&v,p,2); return v; }
++static UINT32 ReadUnaligned32(const UINT32 *p) { UINT32 v; memcpy(&v,p,4); return v; }
++#include "FatSuffix.h"
++int find(const UINT8 *p, size_t n, size_t *offset, UINT64 *bytes) { return FindFatSuffix(p,n,offset,bytes); }
++''')
++    library = work / 'test.so'
++    subprocess.run(['clang', '-Wall', '-Wextra', '-Werror', '-O2', '-shared', '-fPIC',
++                    '-I', str(driver),
++                    str(work / 'test.c'), '-o', str(library)], check=True)
++    lib = ctypes.CDLL(str(library))
++    lib.find.argtypes = [ctypes.c_char_p, ctypes.c_size_t, ctypes.POINTER(ctypes.c_size_t), ctypes.POINTER(ctypes.c_uint64)]
++    def find(blob):
++        offset, size = ctypes.c_size_t(), ctypes.c_uint64()
++        found = lib.find(blob, len(blob), ctypes.byref(offset), ctypes.byref(size))
++        return (offset.value, size.value) if found else None
++    image = work / 'fat.img'
++    with image.open('wb') as stream:
++        stream.truncate(64 << 20)
++    subprocess.run(['mkfs.fat', '-F', '32', str(image)], check=True, capture_output=True)
++    fat = image.read_bytes()
++    for count in [3, 187, 512, 4097]:
++        prefix = b'\x1f\x8b\x08' + bytes(count - 3)
++        assert find(prefix + fat) == (count, len(fat))
++    assert find(fat) is None  # direct FAT keeps the original block device
++    assert find(b'\x1f\x8b\x08') is None
++    assert find(b'\x1f\x8b\x08' + fat[:-1]) is None
++    assert find(b'\x1f\x8b\x08' + fat + b'x') is None
++    for offset, size, value in [(11, 2, 4096), (13, 1, 3), (14, 2, 0), (16, 1, 3),
++                                (17, 2, 1), (19, 2, 1), (22, 2, 1), (32, 4, 0xFFFFFFFF),
++                                (36, 4, 1), (42, 2, 1), (44, 4, 1), (510, 2, 0)]:
++        broken = bytearray(fat)
++        struct.pack_into({1: '<B', 2: '<H', 4: '<I'}[size], broken, offset, value)
++        # Also remove the backup BPB so malformed main headers cannot match it.
++        backup = struct.unpack_from('<H', fat, 50)[0] * 512
++        broken[backup:backup + 512] = bytes(512)
++        assert find(b'\x1f\x8b\x08' + broken) is None, offset
++print('FAT suffix: real FAT32, unaligned prefixes, truncation and invalid BPBs passed')

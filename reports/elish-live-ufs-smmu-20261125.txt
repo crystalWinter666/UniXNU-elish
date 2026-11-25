@@ -1,0 +1,24 @@
+device=elish
+
+fingerprint=Xiaomi/elish/elish:13/RKQ1.211001.001/V816.0.2.0.TKYCNXM:user/release-keys
+
+kernel=Linux localhost 4.19.325-cip136-st20-perf-g6b34d2476532 #3 SMP PREEMPT Tue Oct 13 20:49:59 CST 2026 aarch64 Toybox
+
+SMMU disable_bypass=Y
+
+UFS iommu_group=absent
+
+UFS driver=../../../../bus/platform/drivers/ufshcd-qcom
+
+UFS diagnostics:
+[    0.883804] ufshcd-qcom 1d84000.ufshc: no vccq2-voltage-level property.
+[    0.883872] ufshcd-qcom 1d84000.ufshc: Linked as a consumer to regulator.55
+[    0.883995] ufshcd-qcom 1d84000.ufshc: Linked as a consumer to regulator.28
+[    0.884001] ufshcd-qcom 1d84000.ufshc: Linked as a consumer to regulator.16
+[    0.884007] ufshcd-qcom 1d84000.ufshc: Linked as a consumer to regulator.7
+[    0.884590] ufshcd-qcom 1d84000.ufshc: Linked as a consumer to regulator.36
+[    0.884618] ufshcd-qcom 1d84000.ufshc: ufs_qcom_parse_reg_info: Unable to find qcom,vccq2-parent-supply regulator, assuming enabled
+[    0.908542] ufshcd-qcom 1d84000.ufshc: ufshcd_print_pwr_info:[RX, TX]: gear=[1, 1], lane[1, 1], pwr[SLOWAUTO_MODE, SLOWAUTO_MODE], rate = 0
+[    1.069995] ufshcd-qcom 1d84000.ufshc: ufshcd_needs_reinit: Re-init UFS host to use proper PHY settings for the UFS device. This can be avoided by setting the force-g4 in DT
+[    1.093249] ufshcd-qcom 1d84000.ufshc: ufshcd_print_pwr_info:[RX, TX]: gear=[1, 1], lane[1, 1], pwr[SLOWAUTO_MODE, SLOWAUTO_MODE], rate = 0
+[    1.226243] ufshcd-qcom 1d84000.ufshc: ufshcd_print_pwr_info:[RX, TX]: gear=[4, 4], lane[2, 2], pwr[FAST MODE, FAST MODE], rate = 1

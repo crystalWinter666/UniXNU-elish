@@ -1,39 +1,278 @@
 # UniXNU elish UEFI 移植交接
 
-## 最新交接 · 2026-11-24 22:10 CST 后
+## 最新交接 · 2026-11-25 17:36 CST
 
-目标是在小米平板 5 Pro Wi-Fi（`elish`、`M2105K81AC`、`SM8250-AC`）构建并验证可启动的 iPadOS 17.7.11（`21H461`）。目标已暂停，等待新会话接手。下方日期章节保留当时的观察，当前状态以本节为准。命令中的 `ELISH_SERIAL` 和 `ELISH_BUILD_HOST` 是公开记录使用的占位符。 [移植计划](PLAN.md)
+- 用户手动执行了 `fastboot -s 4bed07e4 boot /root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run12-postmmu-console/boot.img`，报告屏幕出现与此前照片近似的彩条。此命令是 RAM-only `fastboot boot`，不是 `fastboot flash`，不会持久写分区。用户没有提供这次照片，故作为口头观察记录；按描述至多对应 run09 已见的 XNU pre-MMU 彩条，不能确认 run12 的 post-MMU 文字或 `_arm_vm_init()` 返回。
+- 同一轮主机发出的 run12 命令曾返回 `Sending ... FAILED (remote: 'unknown command')`，没有 `Booting OKAY`；之后 USB 仍列出 `4bed07e4 fastboot` / `18d1:d00d`，ADB 为空，但只读 `getvar product` / `getvar is-userspace` 又返回 `GetVar Variable Not found`。用户手动启动后设备现状未再探测。新会话接手时不要假设它仍在正常 fastboot，也不要用 `continue` 或菜单返回系统项；先遵守用户“从 UniXNU 菜单退出就重启”的要求，并且只在设备重新有稳定控制响应时继续。
+- run12 镜像路径与 SHA-256：`/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run12-postmmu-console/boot.img`，`49460e8b7aabf22dc6e921e3435ab47811c9dbd4cfe27b1880a5858d786f324a`。此前一轮主机 RAM-only 启动返回 `Sending OKAY` / `Booting OKAY`，约 6 秒后 fastboot 重枚举，早于探针配置的 15 秒 post-MMU hold；顶置摄像头画面过暗。用户这次手动运行虽看到彩条，但没有新增可核验的 MMU 后证据。
+- 最新直接确认仍是 run09 照片所示 pre-MMU；六秒 stage-3 定时复位/USB 时间线符合 UniXNU 文档对 MMU enable 的诊断判据，但 `_arm_vm_init()` 返回未直接确认。run06/run11/run18/run19 ramoops 仍直接确认 FAT payload、DarwinBoot、256 MiB window `0xc007c000+0x10000000` 与 EBS Success。UFS stream/DMA、APFS root、`launchd` 和 iPadOS 用户态未验证。
+- 21H461 普通主机候选 `/root/elish-build-20261125/UniXNU/out/elish/ipados-17.7.11-21H461/elish/boot/boot.img`，SHA-256 `baa41e0a3b5b0e3c77f97b59af4904a6ec8fdad0afccdf7b401348da0c8e0140`；`kernel.json` SHA-256 `4adfd506a92454cf451d71bbf1aa3a0afe93d57e1954f2ea99f423132d22c83f`，`loadable=false`，未上机。板级 `owned_memory_size` 仍为 256 MiB；本轮未构建或实测 4 GiB 配置。
+- 4 GiB 离线评估输入：run19 accepted-map 日志的 ConventionalMemory 描述符为 `pa=0xc60bc000 pages=0x1b9f44`，即连续长度 `0x1b9f44000`、终点 `0x280000000`，从该区间开头算 4 GiB 终点 `0x1c60bc000`，几何上放得下。UniXNU DarwinBoot 文档说明 4 KiB bootstrap table 上限约 6 GiB，窗口语法允许到 8 GiB；这仍不是 4 GiB 实机分配证据。产物构建目录是 `DEVELOPMENT_ARM64_BCM2837`，源码中 `ARM_PGSHIFT=12`（未定义 `__ARM_16K_PG__` 时），最终编译宏/预处理分支还应由新会话直接确认后再把 board 请求改为 4 GiB。
+- 当前用户要求把工作交给新会话。本轮只更新记录，没有改 `board.toml`、没有持久刷写、没有稳定的新增启动日志。建议下一会话先读取本节及 `PLAN.md` 顶部，确认设备状态与 RAM-only run12 的屏幕证据，再用隔离输出准备有 4 GiB 内存请求的诊断镜像；不要把 `loadable=false` 普通候选当作可启动 iPadOS 镜像。
 
-- **实机已进入 UniXNU 菜单。** `EnvDxe` 在补齐 Info Blk HOB 后安装了 Qualcomm RAM Partition 协议。随后将 `HiiDatabaseDxe` 排到 `ConPlatformDxe` 前。用户在运行 `hii-before-console/boot.img` 时看到了 UniXNU 菜单。主机已回读该镜像的 64 MiB FAT payload，确认包含 `xnu` 条目、三秒倒计时、Mach-O 和 ADT。实机是否读到了该 FAT 配置、实际选择了哪个条目以及是否执行 DarwinBoot 仍待取证。 [实机记录](reports/elish-uefi-pre-bds-memory-map-20261124.md#hii-and-unixnu-menu)
-- **已取得 BDS 前的内存图。** `memory-map-ramoops/boot.img` 临时启动后主动热重启。主机经 `fastboot continue` 和 `adb root` 取回 21,189 字节 pstore，其中有两个 Qualcomm RAM Partition 区间和 47 条 UEFI DRAM 描述符。两段分别为 `0x80000000+0x3bb00000` 和 `0xc0000000+0x1c0000000`，与 live Linux FDT 一致。第二段在该快照中为连续 `EfiConventionalMemory`，容得下 256 MiB loader 窗口。实际窗口位置、低地址保留区归属、initrd 位置和 `ExitBootServices()` 接受的最终图仍待验证。 [采集报告](reports/elish-uefi-pre-bds-memory-map-20261124.md) · [文本日志](reports/elish-uefi-pre-bds-memory-map-20261124.txt#L258)
-- **最新设备状态是 LineageOS ADB。** 序列号 `ELISH_SERIAL`，`adb devices -l` 显示 `device`，`adb root` 在 LineageOS 可用并已确认 `uid=0`。上一轮菜单测试后约 37 秒返回 fastboot，`continue` 后一度只枚举 `05c6:f000` USB 存储接口。设备之后恢复到 LineageOS，pstore 已空。最新一次枚举时 fastboot 为空。本轮两次测试均用 `fastboot boot`，设备分区写入次数为零。
-- **iPadOS 候选已从标准入口重建。** 独立输出目录 `out/elish-resume` 的构建和打包校验通过。该候选仍使用阶段 1 defconfig，`kernel.json` 的 relocation、register-dataflow、ABI、runtime 与 `loadable` 字段仍为 `false`，`boot.json` 的 `hardware_tested` 为 `false`。新候选尚未上机。`userdata-root.img` 已验证文件结构和 APFS System 卷 UUID，仍需在 elish 上实现并验证 UFS/SMMU 读取、APFS 根卷挂载和用户态启动。 [根卷构建](reports/elish-userdata-build-20261124.md)
+## 最新交接 · 2026-11-25 17:29 CST
 
-### 工作区与镜像
+- 按用户要求再次用 RAM-only 重试 run12 post-MMU 检查点。镜像 `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run12-postmmu-console/boot.img` SHA-256 `49460e8b7aabf22dc6e921e3435ab47811c9dbd4cfe27b1880a5858d786f324a`。启动前只读 `getvar product` 为 `elish`；本次 fastboot 对 `boot` 命令返回 `Sending ... FAILED (remote: 'unknown command')`，没有 `Booting OKAY`，所以这次镜像没有执行，不产生 XNU 阶段证据，也未写设备分区。
+- 失败后 USB 仍枚举为 fastboot (`4bed07e4`, USB `1-2`, `18d1:d00d`)，ADB 为空；随后的只读 `getvar product` 与 `getvar is-userspace` 返回 `GetVar Variable Not found`，控制协议状态异常。本轮到此暂停设备探测，不发更多 fastboot 命令、不重启设备。并行顶置摄像头视频 `/tmp/elish-run12-retry-20261125.mkv` 为 24.933 秒、SHA-256 `59bcd6dfa58efbb19eebfbef354fd975aa27c17458c5bbd88ac97e710d19b9ec`；没有可辨认的屏幕日志证据。
+- 本轮较早的一次 run12 RAM-only 启动成功返回 `Sending OKAY` / `Booting OKAY`，约 6 秒后设备重新枚举 fastboot，但早于该探针 15 秒 checkpoint；顶置单帧 `/tmp/elish-run12-now.jpg` 因欠曝不可辨识。因此两次 run12 重试都没有增加确认阶段。当前最后直接 XNU 证据仍是 run09 屏照确认的 pre-MMU；stage-3 时序满足 UniXNU MMU-enable 诊断判据，但 `_arm_vm_init()` 返回未直接确认。FAT payload、DarwinBoot 256 MiB window 与 EBS 成功仍由 run06/run11/run18/run19 ramoops 直接确认。
+- 21H461 常规主机候选仍为 `/root/elish-build-20261125/UniXNU/out/elish/ipados-17.7.11-21H461/elish/boot/boot.img`，SHA-256 `baa41e0a3b5b0e3c77f97b59af4904a6ec8fdad0afccdf7b401348da0c8e0140`；未上机，`loadable=false`。设备探测暂停期间继续离线核查 kernel 实际页粒度和内存窗口；UFS DMA 仍禁用，APFS 根卷与 iPadOS 用户态未验证。
 
-| 用途 | 路径或版本 |
+## 最新交接 · 2026-11-25 17:20 CST
+
+- 用户提醒设备已在 fastboot；本轮只读确认 `fastboot devices -l` 枚举到 `4bed07e4`（USB `1-2`），`fastboot -s 4bed07e4 getvar product` 返回 `product: elish`，`fastboot -s 4bed07e4 getvar is-userspace` 返回 `no`。设备确在 bootloader fastboot 且型号正确。没有重启、启动镜像、写分区或发送关机命令；本轮未生成新启动日志。
+- 当前 21H461 主机候选 `/root/elish-build-20261125/UniXNU/out/elish/ipados-17.7.11-21H461/elish/boot/boot.img`，SHA-256 `baa41e0a3b5b0e3c77f97b59af4904a6ec8fdad0afccdf7b401348da0c8e0140`；本轮未启动。配套 `kernel.json` SHA-256 `4adfd506a92454cf451d71bbf1aa3a0afe93d57e1954f2ea99f423132d22c83f`，`instruction_relocation_complete`、`register_dataflow_qualified`、`abi_qualified`、`runtime_qualified` 与 `loadable` 仍全部为 false。
+- 最后确认阶段没有因本轮 fastboot 枚举而改变：run06/run11/run18/run19 ramoops 直接确认 FAT payload、DarwinBoot、256 MiB 窗口 `0xc007c000+0x10000000` 和 EBS Success；run09 屏照直接确认 XNU 到 pre-MMU。run09 的 stage-3 六秒复位/USB 时间线符合 UniXNU 的 MMU-enable 诊断判据，但 `_arm_vm_init()` 返回尚无直接证据。UFS DMA、APFS 根卷挂载和 iPadOS 用户态仍未确认。
+- 本轮核对了官方 4 KiB 页表说明和候选实际打补丁的 `arm_init.c`。源代码在 native non-Apple 4 KiB 分支下使页 shift 固定跟随 `ARM_PGSHIFT`；Apple 分支则会在 `args->memSize > 1 GiB` 时选择 `PAGE_MAX_SHIFT`。候选的最终预处理宏/构建配置尚未从该产物单独确认，故未擅自把 `owned_memory_size` 从 256 MiB 改为 4 GiB。run19 EBS 图里第二 DRAM bank 的 ConventionalMemory 区间足以让 4 GiB 请求值得做独立 RAM-only 验证，但并不等于该窗口已分配或 XNU 能管理它。
+- 下一步先以已确认的 fastboot 控制通道做有界 RAM-only 检查点，并在运行期间取得屏幕近照/回读日志；同时确定候选 kernel 实际编译的页粒度，再决定是否构建 4 GiB 诊断候选。不要把常规 `loadable=false` 镜像当作用户态候选；UFS DMA 在 stream/context 所有权明确前保持关闭。
+
+## 最新交接 · 2026-11-25 17:02 CST
+
+- 用户询问到 iPadOS 用户态的距离。当前仍在早期 XNU bring-up：FAT payload、DarwinBoot 的 256 MiB 窗口和成功 `ExitBootServices()` 已有 ramoops 直接记录；run09 近照直接确认 XNU 入口到 pre-MMU，配套 stage-3 六秒复位/USB 时间线符合官方 MMU-enable 诊断判据。`_arm_vm_init()` 返回没有直接标记，生产 kernel metadata 仍为 `loadable=false`。
+- 本轮只读快照：ADB `4bed07e4` 为 root，设备 `elish` / `M2105K81AC`，活动槽 `_b`；`ro.build.version.release=17`、SDK `37`，但 build fingerprint 字段仍为 `13/RKQ1.211001.001/V816.0.2.0.TKYCNXM`，版本属性不一致，故不单凭 release 属性判定系统版本。`/sys/fs/pstore` 为空，fastboot 未枚举。没有重启、启动镜像、MMIO 访问或分区写入。空 pstore 只是当前系统的状态，不代表历史 XNU 运行结果。
+- 离线核对 run18 marker 调用点与 pinned XNU 声明相符：`ml_phys_write(paddr, data)` 的 AArch64 参数为 `x0` 地址、`x1` 32-bit 数据，脚本常量生成也与读回期望一致。因此 `magic=0x00004000 / complement=0` 仍不能证明 `_arm_vm_init()` 返回；待解问题在实际物理写入/映射或执行路径，而不是已发现的参数次序错误。
+- 当前 21H461 主机候选 `/root/elish-build-20261125/UniXNU/out/elish/ipados-17.7.11-21H461/elish/boot/boot.img`，SHA-256 `baa41e0a3b5b0e3c77f97b59af4904a6ec8fdad0afccdf7b401348da0c8e0140`，本轮未上机。对应 `kernel.json` SHA-256 `4adfd506a92454cf451d71bbf1aa3a0afe93d57e1954f2ea99f423132d22c83f`；relocation、register dataflow、ABI、runtime 资格及 `loadable` 均为 false。`python3 scripts/check-elish.py --static-only` 与 `git diff --check` 通过。
+- 因此距离不是“再跨一步”：还需直接确认 XNU VM 初始化及 kernel loadability，证明 elish UFS/SMMU stream 与安全 DMA，再做到 UFS 命令、GPT/root、APFS 挂载，最后验证启动服务和 `launchd`。当前没有可信的日历 ETA。下一步优先把 post-MMU checkpoint 做成可直接观察的标记，并继续只读确定 UFS 电源/时钟/SMMU 路径；UFS DMA 维持关闭。
+
+## 最新交接 · 2026-11-25 16:50 CST
+
+- 本轮只读 ADB 导出 `reports/elish-live-ufs-smmu-20261125.txt`，SHA-256 `95402cb216f86c2c576ddbfed47d97def68b7b64ffd53efe90fc406362c09e56`。设备是 Android 13 `V816.0.2.0.TKYCNXM`，Lineage kernel `4.19.325-cip136-st20-perf-g6b34d2476532`（源码 `6b34d24765327d746074c8e53b5ad0d24a51acc7`）；UFS 由 `ufshcd-qcom` 绑定，无 `iommu_group`，SMMU `disable_bypass=Y`。日志明确 UFS host/PHY 因 proper PHY settings 被重新初始化，再从 Gear 1/单 lane/SLOWAUTO 升到 Gear 4/双 lane/FAST。
+- 更正之前的临时推断：此前误把 `ptrace_scope=0` 读成 `disable_bypass=0`，并据此推断未绑定的 UFS 使用物理直通 DMA。现在对正确的 sysfs 路径实测为 `Y`；Lineage kernel 的 SMMU 源码说明 unmatched streams fault。故“无 iommu_group => 物理直通”不成立，Android 的 UFS stream/DMA 路径仍未知。该更正已写入 storage record；绝不根据此参数猜测 UEFI/XNU 路径。
+- 查阅当前 UniXNU UFS 指南和公开 SM8250-AC `NativeUfs-alioth`/`UniXNU-alioth` 移植记录：参考代码验证 stream 精确匹配、context 独占、bypass 状态及 DMA 地址宽度；同 SoC alioth 有 UFS root 与 launchd 结果。可复用的是流程与检查模式，`0xe0`/`0x4e0` stream 和 alioth GCC/SM8550 派生时钟值不可用于 elish。详情及精确 revision 见 [UFS handoff/reference audit](reports/elish-ufs-reference-audit-20261125.md)。
+- 该对照不改变 elish 当前里程碑：run09 照片确认 XNU 到 pre-MMU，stage-3 定时复位/USB 时间线符合官方 MMU-enable 诊断判据；`_arm_vm_init()` 返回未被有效 marker 直接证实。成功 EBS 有 ramoops 证据，但 kernel 仍 `loadable=false`，尚未做 XNU 设备 UFS 命令、设备 APFS mount 或 launchd。距离用户态仍有早期 XNU/内存 handoff、生产 kernel 资格、UFS DMA/transport、root/APFS 和启动服务等关卡，暂无可靠 ETA。
+- 下一步先加一轮只读 UEFI handoff probe：读取板级 GCC power/clock/reset 与 SMMU global control/stream map；只有确认 UFS power/access window 正常后再读控制器寄存器。之后先证实 stream 路由和 DMA buffer 可达，再做有界 NOP/read-capacity、已知块、GPT/root window、APFS 和 launchd。UFS DMA 继续关闭。主机 `git diff --check` 与 porting record checker (`elish: 14 structured areas checked`) 通过；本轮未重启设备、未触碰 MMIO、未写分区，设备最后观察仍为 root ADB Android。
+
+## 最新交接 · 2026-11-25 16:05 CST
+
+- run09 用户近照 `/root/repo/A3AABAD37D0E0E787C85F39100B9ACCB.png`（SHA-256 `b03cc52878f046d7574ab1a776a3f83662f10251875438dcfbd2181ac99ee7b8`）显示绿色 EBS、蓝色 XNU 入口和品红色 MMU 前阶段条，直接确认 XNU 到达 MMU 前检查点。该镜像在 MMU 开启后六秒执行 stage-3 PSCI 复位；USB 于 15:47:32 断开、15:47:50 返回 fastboot，照片时间为 15:47:51。按 UniXNU green-bar diagnosis 的 stage-3 判据，当前记录为 MMU 已开启；这是定时复位证据，不是 pstore/串口的内核日志标记。run09 曾写入备份过的活动槽 `boot_b`，随后已恢复原分区。
+- run13 `_arm_vm_init` 返回探针（SHA-256 `05b8620d4ccc74e95bccb3fef0edc71946d205036e0fd71da005361a2ff459b9`）和 run17 `PE_init_printf` 探针（SHA-256 `3bcc3f62f519b96a5b56fd47da752a68c168b3f63e5c17c36a3bf8e92c9d6f7e`）均有接近配置复位时序的 USB 返回，属于间接证据。run18 pmsg readback 的 marker 为 `magic=0x00004000, complement=0, valid=0`，因此 `_arm_vm_init` 返回未直接证实。没有后续 XNU 平台启动或 Darwin kernel log 证据。
+- run19 只读 SMMU 捕获未发现活动 ACPI IORT；唯一有效 apps-SMMU 项为 SID `0x820`、mask `0x402`、context bank 4。Android live FDT 中 MDSS 的 `qcom,smmu_sde_unsec_cb` 声明 `iommus = <0x46 0x820 0x402>`，phandle `0x46` 为 `#iommu-cells=2` 的 apps-SMMU，因此该映射归属于显示 SDE。UFS 节点没有 `iommus` 或 `iommu_group`，UFS SID/DMA 模式仍未知，继续禁用 UFS DMA。
+- FAT payload、DarwinBoot 256 MiB window `0xc007c000+0x10000000`、EBS Success（key `0x3ee`）已有 run06/run11/run18/run19 console ramoops 直接记录。生产 XNU prelink metadata 仍为 `loadable=false`；UFS 设备访问、APFS SystemOS/root 挂载和 iPadOS 用户态均未验证。最新阶段/下一步汇总见 [进度报告](reports/elish-progress-20261125-1605.md)。
+- 后续先定位 run18 pmsg marker 未读回原因，并在 `_arm_vm_init` 返回后加入可见检查点；并行核实 UFS 的 XBL ARID/DMA 路径和运行时初始化。之后确认 XNU runtime memory ownership 与 production kernel 资格，再推进只读 UFS、设备 APFS mount 和 launchd。设备最后一次记录状态为 reader 恢复后的 root `lineage_elish` ADB；未留持久分区修改。
+
+## 最新交接 · 2026-11-25 15:38 CST
+
+- 用户给出的 `web1n/android_device_xiaomi_elish` 已核对，HEAD 为 `23e652dde3a1b1a2f6f6ff3f7e088d3f6c814772`。它是 LineageOS 21 设备配置仓，不含 DTS/DTSI；`BoardConfig.mk` 继承 `sm8250-common`，`lineage.dependencies` 也只引入该公共设备仓。公共仓 HEAD `ae56501ed9cedbd1a66047e0d3aea9f41a830aec` 的 fstab 用 `sysfs_path=/sys/devices/platform/soc/1d84000.ufshc` 标识 Android UFS host，但没有 SID。实机 root ADB 当前读取的 UFS FDT 节点没有 `iommus` 属性，`iommu_group` 链接也不存在。该项目补充了板级 Android 路径信息，仍不能把 run19 的 apps-SMMU SID `0x820` 归属给 UFS。详情见 [Kona UFS/SMMU 审计](reports/elish-ufs-kona-clock-map-20261125.md)。
+- run17 `PE_init_printf` RAM-only 镜像 `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run17-printf-init/boot.img`，SHA-256 `3bcc3f62f519b96a5b56fd47da752a68c168b3f63e5c17c36a3bf8e92c9d6f7e`；fastboot 37.0.3 的发送和启动均成功，设备随后在约 15 秒探针复位时序附近重新枚举为 fastboot。没有可读近照，也没有该次 run17 的 ramoops 读回；USB 回来时间不能证明 `PE_init_printf` 返回或 MMU 后路径。随后已 RAM-only 启动 reader，当前设备回到 root ADB `lineage_elish` / `M2105K81AC`。本轮未写分区、未发关机命令，也未使用 `fastboot continue`。完整测试说明见 [run14–17 报告](reports/elish-run14-run17-xnu-timing-20261125.md)。
+- 本轮只读 ADB 确认设备在线且 `uid=0`；fastboot 当前未枚举。未启动常规 21H461 镜像；当前主机候选 `/root/elish-build-20261123/UniXNU/out/elish/ipados-17.7.11-21H461/elish/boot/boot.img` SHA-256 为 `a8ce2352da7416064a891b6d7ab29102190aaaf508c236cc4d180c5685b146fa`。
+- 最新直接确认的 XNU 阶段仍是 run09 近照中的 pre-MMU 彩条。run06/run11/run18/run19 的 ramoops 直接确认 FAT payload、DarwinBoot 256 MiB 窗口 `0xc007c000+0x10000000` 和成功 `ExitBootServices()`；run18/readback 未读到有效 post-VM marker，run19 读到 ACPI configuration 没有 IORT，故 MMU 后、UFS DMA、设备 APFS 根卷和 iPadOS 用户态均未确认。下一步先做能直接区分 MMU 后检查点的诊断；UFS DMA 继续禁用。
+
+## 最新交接 · 2026-11-25 14:58 CST
+
+- 设备当时以 root ADB 枚举为 `lineage_elish` / `M2105K81AC`，活动槽 `_b`；测试前 `/sys/fs/pstore` 为空。之后 run18 marker、run18 readback、增强版 run19 和 hash-verified Lineage reader 均通过 RAM-only `fastboot boot`。没有写任何设备分区，没有发关机命令，也没有选择 UniXNU 菜单返回系统项。测试结束后 reader 已恢复 root `lineage_elish` ADB。
+- run18 post-VM 镜像 `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run18-post-vm-pmsg-image/boot.img`，SHA-256 `842ac4db5666b20cae96725ec621fa0c42ce74fe612f19eebb8ac8d36a6e30`；回读镜像 `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run18-pmsg-readback-image/boot.img`，SHA-256 `d96aeadaf64999975f6af3427b8a811aaed639679d111ff70992cb24f559c939`。顶置相机观察到绿/蓝/品红条，约与探针 15 秒复位时序相符，但没有可读近照。pmsg 回读得 `magic=0x00004000 complement=0x00000000 valid=0`，故 `_arm_vm_init` 返回仍未确认。readback console 日志 `reports/elish-run18-pmsg-readback-console-ramoops-20261125.txt` 为 46,607 字节，SHA-256 `a2d7e0c084aa13572dc9dc9ff51faf1593f829f1ddab8716426154137b3c3627`。
+- 增强版 run19 IORT/SMMUv2 镜像 `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run19-iort-smmu-nodeids/boot.img`，SHA-256 `c8d724467afb0822ad6caba9074a2b40a5dc8075a4947589ee947cfcef6dd371`；FD SHA-256 `c9b1be78eb7866155798a9a082d76b0403ed2d5331a94e7a9427c3cb67de34dc`。实机日志明确报告当前 ACPI configuration 中没有 IORT；SMMU group 4 为 `SID=0x820 mask=0x402 S2CR=0x4 cb=4`，context `CBAR=0x1f000 SCTLR=0xe0 TTBR0=0 TCR=0 FSR=0x400`，S1 未启用。无法把该 SID 归属到 UFS，UFS DMA 继续禁用。原始 console log `reports/elish-run19-iort-smmu-console-ramoops-20261125.txt` 为 49,786 字节，SHA-256 `322c28323084e3239e35300f1be43a77b062b379c08af99fbcf2842f575140f0`。
+- run18 readback 与 run19 ramoops 均再次确认 FAT initrd 子卷、DarwinBoot 256 MiB 窗口 `0xc007c000+0x10000000`，以及 `ExitBootServices()` 成功（key `0x3ee` 与 snapshot 相同）；两探针均按设计在 XNU 前停止。最新日志确认阶段是 EBS，最新直接 XNU 证据仍是 run09 用户近照中的 pre-MMU 条带。MMU 后、UFS 读取、APFS root 和 iPadOS 用户态仍未确认。
+- 两轮命令、所有镜像路径/哈希和日志见 [run18/run19 实机报告](reports/elish-run18-run19-device-20261125.md)。下一步离线检查 pmsg marker 地址与 XNU MMU 后运行路径，并寻找 elish 专属 UFS 初始化/映射证据；不得根据 Kona/alioth 的 `0x4e0`/`0xe0` 猜测，也不启用 UFS DMA。
+
+## 最新交接 · 2026-11-25 12:08 CST
+
+- 用户允许休息期间写设备分区，但要求设备不能关机；持久写入前仍须备份。本轮只读 `adb devices -l` 与 `fastboot devices -l` 均为空，与用户报告可进入 fastboot 的状态不一致。按设备不可见时暂停探测的约定，没有继续发 USB/fastboot 命令，没有启动、重启、写分区或改变电源状态。
+- 顶置摄像头快照 `/tmp/elish-current-camera-20261125-late.jpg` 为 1920x1080，SHA-256 `25dde9a4cf57cd90a6bff7e4fb249fa6e13695e11784acd2e73758546c80f7ac`；画面欠曝且无法辨认平板屏幕，不能据此判定屏幕或设备电源状态。
+- 离线审阅 run19 `ElishLoaderProbeDxe.c`：IORT 表长、节点长度及映射数组做了边界校验；SMMU 扫描只读受限 MMIO 寄存器，不写寄存器、不安装表、不进入 XNU。该审阅没有生成新的实机证据。run19 镜像 `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run19-iort-smmu-readonly/boot.img` SHA-256 `ab653c2ebee272a7a56fc0c60eba6490b14e77132dd3b3eccc3a91d7aaf9fe0b`，仍未上机；run18 marker/readback 镜像 SHA-256 分别为 `842ac4db5666b20cae96725ec621fa0c42ce74fe612f19eebb8ac8d36a5e6a30` 与 `d96aeadaf64999975f6af3427b8a811aaed639679d111ff70992cb24f559c939`，也仍未上机。
+- 本轮没有启动镜像、没有新日志。最近直接确认阶段仍为 run09 屏照中的 XNU pre-MMU；run06/run11 ramoops 仍确认 FAT payload、DarwinBoot、256 MiB 窗口和成功 `ExitBootServices()`。MMU 返回、UFS/SMMU 归属、APFS 根卷及 iPadOS 用户态未确认。设备恢复枚举后先核验 `product=elish`，RAM-only 运行 run18 marker/readback，再单独运行 run19；UFS DMA 继续禁用。不得发送关机命令或选择 UniXNU 菜单返回系统项。
+
+## 最新交接 · 2026-11-25 11:59 CST
+
+- 本轮设备没有重新枚举；最近一次只读快照（11:40 CST）中 USB、fastboot、ADB 均未发现平板。没有发送设备请求、启动/重启、写分区或改变电源状态，相机帧也无法判断屏幕状态。
+- 新增单独的 run19 只读 IORT/SMMUv2 诊断镜像，尚未上机：`/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run19-iort-smmu-readonly/boot.img`，67,751,936 字节，SHA-256 `ab653c2ebee272a7a56fc0c60eba6490b14e77132dd3b3eccc3a91d7aaf9fe0b`；配套 FD `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run19-iort-smmu-readonly/SILICIUM_UEFI.fd`，3,145,728 字节，SHA-256 `2f40713e964cd2ba54d66759244e4dba7bfe1340746b21676864a9f795b797dc`。构建参数、payload/DTB 哈希、修订和限制见 [run19 构建报告](reports/elish-iort-smmu-probe-20261125.md)。固件已编译并确认包含 IORT/SMMU 诊断字符串；这仅是主机证据。
+- run19 在现有 SMMU 只读模式下枚举当前 UEFI ACPI IORT，校验表/节点/映射边界后记录 `UFS0` 映射，再读取 SMMUv2 寄存器；不会写寄存器、安装表或进入 XNU。运行时表和 ARID 到 SID 的关系仍待实机读取，UFS DMA 继续禁用。
+- 本轮未运行镜像，无新增设备日志。最近直接启动阶段仍为 run09 用户照片中的 XNU pre-MMU；run06/run11 日志确认 FAT payload、DarwinBoot、256 MiB 窗口和 EBS 成功。MMU 后、UFS/SMMU 接管、APFS 根卷挂载和 iPadOS 用户态都未确认。常规 21H461 镜像 SHA-256 仍为 `baa41e0a3b5b0e3c77f97b59af4904a6ec8fdad0afccdf7b401348da0c8e0140`；run18 marker/readback 镜像未上机。设备恢复后先 RAM-only 测 run18，再单独运行 run19；任何持久分区写入前先备份，不发送关机命令，也不选择 UniXNU 菜单返回系统项。
+
+## 最新交接 · 2026-11-25 11:40 CST
+
+- 本轮只读 USB 快照未发现平板：`lsusb` 只有主机 root hub、顶置摄像头、键盘和鼠标，`fastboot devices -l` 与 `adb devices -l` 均为空。只做了这一轮枚举，没有继续发送设备协议命令、启动/重启、写分区或改变电源状态。V4L2 单帧 `/tmp/elish-current-camera-20261125.jpg`（640x480，SHA-256 `f42a6437d40f232b6b767f97ec949c25202c6971015d14518dddbba15aab365b`）全暗，不能据此判断屏幕或设备状态。
+- 主机验证重跑通过：`git diff --check`、`python3 scripts/check-elish.py --static-only`、UniXNU `porting-record.py check --device /root/repo/UniXNU-elish`（14 区域）及 `scripts/package.sh --check --os ipados-17.7.11-21H461`（解析 63 个补丁）。静态检查仍提示运行时内存 handoff 未验证；package check 没有构建或启动镜像。
+- 离线核对到共享 Kona IORT 模板含 `\\_SB.UFS0` 节点，映射输出基址为 `0x4e0`/`0xe0`；但 elish 的 DSC/FDF 没有集成 `AcpiTables.inf` 或 `AcpiTableDxe`，所以不能把模板当作 elish 运行时 IORT。它与 run11 唯一观测到的 SID `0x820` 也不相同。结论、哈希和参考板集成方式见 [UFS/SMMU 审计](reports/elish-ufs-uefi-arid-audit-20261125.md)，UFS DMA 继续禁用。
+- 本轮未运行镜像，无新增设备日志。未上机候选：常规 21H461 镜像 `/root/elish-build-20261125/UniXNU/out/elish/ipados-17.7.11-21H461/elish/boot/boot.img`，SHA-256 `baa41e0a3b5b0e3c77f97b59af4904a6ec8fdad0afccdf7b401348da0c8e0140`；run18 post-VM marker `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run18-post-vm-pmsg-image/boot.img`，SHA-256 `842ac4db5666b20cae96725ec621fa0c42ce74fe612f19eebb8ac8d36a5e6a30`；pmsg readback `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run18-pmsg-readback-image/boot.img`，SHA-256 `d96aeadaf64999975f6af3427b8a811aaed639679d111ff70992cb24f559c939`。
+- 最近直接确认阶段仍是 run09 用户近照中的 XNU pre-MMU。run06/run11 ramoops 日志 `reports/elish-run06-smmu-console-ramoops-20261125.txt`、`reports/elish-run11-smmu-context-console-ramoops-20261125.txt` 确认读取 FAT payload、进入 DarwinBoot、256 MiB 窗口及成功 `ExitBootServices()`；run11 在 XNU 前停止。MMU 后、UFS/SMMU 接管、设备 APFS root 和 iPadOS 用户态都未确认。设备恢复枚举后，先确认 fastboot 控制通道及 `product=elish`，再按 run18/readback 流程 RAM-only 测试；任何持久写入先备份分区，不发送关机命令，也不选择菜单中的返回系统项。
+
+## 最新交接 · 2026-11-25 11:24 CST
+
+- 本轮 `lsusb -d 18d1:d00d`、`fastboot devices -l` 和 `adb devices -l` 均未枚举平板。遵照设备不可见时暂停设备操作，没有发 fastboot 控制请求、启动/重启、改写分区或改变电源状态。V4L2 快照 `/tmp/elish-current-camera-check-mjpg.jpg`（640x480，SHA-256 `79d4c0f1c65f0e15306c6c90baede715d8c9a491b9b87caa475045d197484e0d`）近乎全暗，不能判断屏幕或设备电源状态。
+- 更正 UFS firmware 审计：`UFSDxe`/`SdccDxe` 实际查询 GUID 为 `54b6d3b4-5d33-4f91-8600-6c41d5deb19a`；此前的 `416c0086-ded5-9ab1-b673-0e22db6b1344` 来自查询 GUID 起始地址偏移 8 字节的误读。stock XBL `HALIOMMUDxe` PE32 与 alioth/pipa catalog 模块完全相同，并通过同一 GUID 安装 provider。HAL 按设备路径和 ARID 读取 ACPI IORT mapping 后配置 SMMU；elish 当前 IORT 实际 stream mapping 未取回，所以 run11 SID `0x0820` 仍无法归属 UFS。审计和复现脚本见 [UFS/SMMU firmware audit](reports/elish-ufs-uefi-arid-audit-20261125.md)。UFS DMA 仍禁用。
+- 本轮未启动镜像或写分区，也没有新的设备日志。21H461 常规候选 `/root/elish-build-20261125/UniXNU/out/elish/ipados-17.7.11-21H461/elish/boot/boot.img`（SHA-256 `baa41e0a3b5b0e3c77f97b59af4904a6ec8fdad0afccdf7b401348da0c8e0140`）、run18 post-VM marker（`842ac4db5666b20cae96725ec621fa0c42ce74fe612f19eebb8ac8d36a5e6a30`）和 pmsg readback（`d96aeadaf64999975f6af3427b8a811aaed639679d111ff70992cb24f559c939`）均未上机。
+- 最近直接确认阶段仍为 run09 屏照中的 XNU pre-MMU。run06/run11 ramoops 日志 `reports/elish-run06-smmu-console-ramoops-20261125.txt`、`reports/elish-run11-smmu-context-console-ramoops-20261125.txt` 确认读取 FAT payload、进入 DarwinBoot、使用 256 MiB 窗口并成功 `ExitBootServices()`；run11 在 XNU 前停止。MMU 后、UFS/SMMU 接管、设备 APFS 根卷和 iPadOS 用户态都未确认。设备恢复枚举后先核验 fastboot 控制通道与 `product=elish`，再执行 run18/readback 流程；退出 UniXNU 菜单时直接重启，不选择返回系统项。
+
+## 最新交接 · 2026-11-25 10:54 CST
+
+- 设备在 USB、fastboot 和 ADB 快照中都未枚举。本轮遵照设备不可见时停止探测，没有发送设备命令、重启、启动镜像或写分区；也没有改变设备电源状态。V4L2 单帧 `/tmp/elish-live-state-current.jpg`（640x480，SHA-256 `42a001a78be79cc67a2b11bea0cf065dbcf49ff235558838b2d524df5b0d59e7`）处理后仍近乎全暗，不能辨认屏幕或判断设备当前状态。
+- 继续离线反编译 elish stock XBL 中与 catalog 同哈希的 `UFSDxe`。它与 SDCC DXE 共用私有 IOMMU protocol GUID `416c0086-ded5-9ab1-b673-0e22db6b1344`；UFS attach 使用 ACPI 路径 `\_SB_.UFS0` 和 ARID `0x0`/`0x10`，SDCC 使用 `0x0`/`0x1`。这确认 ARID 是协议的设备侧参数，不能映射成 run11 apps-SMMU SID；SID `0x0820` 所有者仍未知。catalog 中未定位该私有协议的提供者。审计细节与可复跑 Ghidra 脚本见 [UFS ARID 审计](reports/elish-ufs-uefi-arid-audit-20261125.md)。没有启用 UFS DMA。
+- 本轮没有启动镜像，分区未写入。21H461 常规候选 `/root/elish-build-20261125/UniXNU/out/elish/ipados-17.7.11-21H461/elish/boot/boot.img`（SHA-256 `baa41e0a3b5b0e3c77f97b59af4904a6ec8fdad0afccdf7b401348da0c8e0140`）、run18 post-VM marker `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run18-post-vm-pmsg-image/boot.img`（`842ac4db5666b20cae96725ec621fa0c42ce74fe612f19eebb8ac8d36a5e6a30`）和 pmsg readback `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run18-pmsg-readback-image/boot.img`（`d96aeadaf64999975f6af3427b8a811aaed639679d111ff70992cb24f559c939`）本轮均未上机。
+- 没有新增启动阶段或设备日志。最近直接确认仍是 run09 照片所示 XNU pre-MMU；run06/run11 ramoops 日志确认 FAT payload、DarwinBoot、256 MiB 窗口和 EBS Success，run11 在 XNU 前停止。MMU 后、UFS/SMMU 接管、设备 APFS 根卷和 iPadOS 用户态均未确认。用户休息期间不做电源状态切换；设备重新枚举后先核实 fastboot 控制通道，再按 run18 与 readback 流程操作。
+
+## 最新交接 · 2026-11-25 10:44 CST
+
+- 本轮只读 USB 快照仍未枚举平板：`lsusb -d 18d1:d00d`、fastboot 和 ADB 均为空。遵照不可见时暂停设备探测，没有发送设备协议请求、启动/重启或写分区；设备屏幕和电源状态未知。
+- 本轮没有启动或生成新镜像。常规候选 SHA-256 仍为 `baa41e0a3b5b0e3c77f97b59af4904a6ec8fdad0afccdf7b401348da0c8e0140`；run18 post-VM marker 镜像为 `842ac4db5666b20cae96725ec621fa0c42ce74fe612f19eebb8ac8d36a5e6a30`，pmsg readback 镜像为 `d96aeadaf64999975f6af3427b8a811aaed639679d111ff70992cb24f559c939`，均未上机。
+- 核对移植记录后，Android R UFS/SMMU 交叉审计已由 storage 区域引用；它没有识别 UFS stream，run11 的 SID `0x0820` 所有者仍未知，UFS DMA 仍禁用。详细证据见 [Kona UFS 映射审计](reports/elish-ufs-kona-clock-map-20261125.md)。
+- 主机复核通过：`git diff --check`、`python3 scripts/check-elish.py --static-only` 和 14 区域移植记录检查。静态检查仍提示运行时 handoff 未验证。
+- 无新增启动阶段或设备日志。最近直接阶段仍是 run09 的 XNU pre-MMU 屏照；run06/run11 直接日志确认 FAT payload、DarwinBoot、256 MiB 窗口和成功 EBS。MMU 后阶段、UFS/SMMU 接管、APFS 根卷和 iPadOS 用户态仍未确认。设备恢复枚举且 fastboot 控制请求正常后，按 run18 与 pmsg readback 流程 RAM-only 测试；不发关机命令，也不选择 UniXNU 菜单返回系统项。
+
+## 最新交接 · 2026-11-25 10:41 CST
+
+- 本轮 USB 快照仍未枚举平板（`lsusb -d 18d1:d00d`、fastboot 和 ADB 为空）。遵照设备不可见时暂停探测，没有发送设备协议请求、启动、重启或写入分区。屏幕/电源状态未知；本轮未能从相机辨认屏幕。
+- 更正旧 run18 记录中的风险描述：pmsg readback 镜像只读取 pmsg 区和 marker，`RamLogWrite()` 写到不重叠的 console 区，不会覆盖 pmsg 最后一页。当前读取流程已核对至 root ADB reader；真实 warm-reset 保留行为仍待设备验证。详见 [run18 pmsg 路径审计](reports/elish-run18-pmsg-path-audit-20261125.md) 和 [run18 构建报告](reports/elish-run18-post-vm-pmsg-20261125.md)。
+- Android R 内核 revision `52a2f180865f8368828985d6384130acd093fa93` 的本地 Kona MTP UFS 配置和通用 `qcom,ufshc` 驱动没有给出 UFS stream ID；它不是 elish 专属证据。结合 stock elish DT 无 `iommus` 属性，run11 的 SID `0x0820` 所有者仍未知，不启用 UFS DMA。详见 [Kona UFS 映射审计](reports/elish-ufs-kona-clock-map-20261125.md)。
+- 离线审计 pinned XNU `d8b80295118ef25ac3a784134bcf95cd8e88109f` 后确认 run18 地址路径在源码上成立：`0xb03ff000` 位于 run06/11 XNU 窗口 `0xc007c000+0x10000000` 之外，`_ml_phys_write` 对非 managed 页走 copy window；`pmap_cache_attributes()` 为无特定 I/O range 的页返回 `VM_WIMG_IO`。这与 UEFI map 将 `0xb0000000+0x400000` ramoops 标作 reserved/uncached 相符，但没有运行时写入或跨复位保留证据。细节见 [run18 pmsg 路径审计](reports/elish-run18-pmsg-path-audit-20261125.md)。
+- 独立复现 post-VM 补丁后，产物与既有 run18 内核 SHA-256 完全相同（`8f0fcd60069e14672bb71ec633c74b9b02f53870daafc5c8188c507bae146ee5`）。`llvm-objdump` 确认 `_arm_init` 的调用分支进入代码洞，代码洞调用 `_arm_vm_init`，返回后两次调用 `_ml_phys_write` 写 marker/反码，再等待 15 秒并 PSCI warm reset；这是主机二进制验证，未增加实机阶段。
+- 审计 UEFI 日志边界后确认 RamLog console 环只写 `0xb0000000..0xb0200000`；pmsg 读取区为 `0xb0200000..0xb0400000`，readback 日志回写到 console 环，因此回读本身不会覆盖 marker。仍需设备实测验证 warm reset 保留行为，见同一 [run18 pmsg 路径审计](reports/elish-run18-pmsg-path-audit-20261125.md)。
+- 本轮没有启动任何镜像或生成新镜像。常规候选 `/root/elish-build-20261125/UniXNU/out/elish/ipados-17.7.11-21H461/elish/boot/boot.img`（SHA-256 `baa41e0a3b5b0e3c77f97b59af4904a6ec8fdad0afccdf7b401348da0c8e0140`）、run18 post-VM marker 镜像 `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run18-post-vm-pmsg-image/boot.img`（SHA-256 `842ac4db5666b20cae96725ec621fa0c42ce74fe612f19eebb8ac8d36a5e6a30`）和 pmsg readback 镜像 `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run18-pmsg-readback-image/boot.img`（SHA-256 `d96aeadaf64999975f6af3427b8a811aaed639679d111ff70992cb24f559c939`）本轮均未上机。
+- 本轮主机检查：run18 补丁可确定性复现，反汇编分支/调用目标符合预期；`python3 scripts/check-elish.py --static-only` 通过并提示运行时 handoff 仍待验证；移植记录检查通过（14 区域）；设备仓 `git diff --check` 通过。这些不构成设备启动证据。
+- 无新增启动阶段或设备日志。最近直接 XNU 阶段仍是 run09 屏照所示 entry/pre-MMU；run06/run11 控制台日志直接确认 FAT payload、DarwinBoot、256 MiB 窗口和 EBS Success，run11 明确在 XNU 前停止。MMU 后启动、UFS/SMMU 接管、设备 APFS 根卷及 iPadOS 用户态均未确认。设备恢复枚举且 fastboot 控制请求正常后，按现有方案 RAM-only 启动 run18，再启动只读 pmsg 回读镜像并用 root ADB reader 导出 UEFI console。不得发送关机命令，也不要选择 UniXNU 菜单的返回系统项。
+
+## 最新交接 · 2026-11-25 10:08 CST
+
+- 本轮初始只读快照中 `lsusb -d 18d1:d00d`、fastboot `devices -l` 和 ADB 均未枚举平板。遵照设备不可见时暂停探测，没有发送 fastboot/ADB 请求、启动或重启设备，也没有写分区。设备当前屏幕/电源状态未知。
+- 离线构建 run18 `_arm_vm_init` 返回检查点：内核在函数返回后用 `_ml_phys_write` 将 magic/反码写到 pmsg 保留区 `0xb03ff000`，等待 15 秒后 PSCI reset。内核 SHA-256 `8f0fcd60069e14672bb71ec633c74b9b02f53870daafc5c8188c507bae146ee5`；payload SHA-256 `d6ff20e31c4b375ea15192c7c718c595d3de2bb8310596b6647ccc5acf27c0ce`；boot image `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run18-post-vm-pmsg-image/boot.img`，67,751,936 字节，SHA-256 `842ac4db5666b20cae96725ec621fa0c42ce74fe612f19eebb8ac8d36a5e6a30`。另构建只读 pmsg 回读镜像 `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run18-pmsg-readback-image/boot.img`，67,751,936 字节，SHA-256 `d96aeadaf64999975f6af3427b8a811aaed639679d111ff70992cb24f559c939`；它在 EBS 后复位，不进入 XNU。完整路径、FD 哈希和构建命令见 [run18 报告](reports/elish-run18-post-vm-pmsg-20261125.md)。
+- 主机检查通过：脚本语法、两次 DEBUG 固件构建、boot image 构建/回读、`test_bootimg.py`（1 项）、`test_boot_template.py`（13 项）、`check-elish.py --static-only`、14 区域移植记录及两个仓库 `git diff --check`。这些均非实机证据；常规 iPadOS 候选仍为 SHA-256 `baa41e0a3b5b0e3c77f97b59af4904a6ec8fdad0afccdf7b401348da0c8e0140`，本轮未修改或启动。
+- 本轮没有新增启动日志或阶段。最近直接 XNU 阶段仍为 run09 近照显示的 entry/pre-MMU 条带；run06/run11 仍直接确认 FAT payload、DarwinBoot、256 MiB 窗口与 EBS Success。MMU 完成、UFS/SMMU 所有权、设备 APFS root 和用户态未确认。设备重新枚举且 fastboot 控制请求正常后，核验 `product=elish`，RAM-only 启动 run18，再启动回读镜像并用 root ADB reader 导出 `console-ramoops-0`。不要选择 UniXNU 菜单的返回系统项；不得发送关机命令。
+
+## 最新交接 · 2026-11-25 09:31 CST
+
+- 按用户最新说明，可在其休息期间继续授权范围内的设备操作，但不得将设备关机；本轮主机 `lsusb`、fastboot 和 ADB 均未枚举平板，因此没有发送设备协议请求、启动/复位设备或写分区。顶置摄像头只读帧 `/tmp/elish-live-state-20261125.jpg`（640x480，SHA-256 `cdd594ab518dbc640ce6c0daac1a38f2aafb053e3b47146765fb919967cd5f3e`）严重欠曝，不能辨认屏幕阶段，也不据此判断设备电源状态。
+- 离线复核通过：`python3 scripts/check-elish.py --static-only`（提示运行时 UEFI/XNU handoff 仍未验证）、`python3 /root/repo/UniXNU/scripts/porting-record.py check --device /root/repo/UniXNU-elish`（14 区域）、UniXNU `test_bootimg.py`（1 项）、`test_boot_template.py`（13 项）、XnuPrelink（65 项）和 `git diff --check`。iPadOS 候选 `/root/elish-build-20261125/UniXNU/out/elish/ipados-17.7.11-21H461/elish/boot/boot.img` 为 67,747,840 字节，SHA-256 `baa41e0a3b5b0e3c77f97b59af4904a6ec8fdad0afccdf7b401348da0c8e0140`；run17 检查点 `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run17-printf-init/boot.img` 为 67,751,936 字节，SHA-256 `3bcc3f62f519b96a5b56fd47da752a68c168b3f63e5c17c36a3bf8e92c9d6f7e`。两镜像本轮均未上机。
+- 本轮无新增启动阶段或日志。最近直接 XNU 阶段证据仍为 run09 近照 `/root/repo/UniXNU-elish/reports/elish-run09-screen-20261125.jpg`：蓝色 XNU entry 与品红色 pre-MMU 标记可见；run06/run11 原始控制台记录确认 FAT payload、DarwinBoot、256 MiB 窗口及 `ExitBootServices()` 成功，详见 `reports/elish-run06-smmu-console-ramoops-20261125.txt`、`reports/elish-run11-smmu-context-console-ramoops-20261125.txt`。`_arm_vm_init` 返回、UFS/SMMU 交接、设备 APFS root 和 iPadOS 用户态均未确认。后续设备恢复枚举时，先验证 fastboot 控制请求和 `product=elish`，再按授权 RAM-only 启动 run17 并用 reader root ADB 分别检查 pmsg 与 console；若涉及持久分区写入，先备份。严禁选择 UniXNU 菜单“返回系统”或发送关机命令。
+
+## 最新交接 · 2026-11-25 09:25 CST
+
+- 离线解析 run09 后使用的原始 Lineage reader 镜像。reader SHA-256 `57dbb98dec813b2a8c7bbd67a59f715aa1abf366905a24270aba594ec4ca44c4`，由备份 `boot_b.img` 去掉分区尾部填充而来，kernel 与 ramdisk 未改。提取的 4.19.325 kernel 含内嵌配置：`CONFIG_PSTORE_PMSG=y`、`CONFIG_PSTORE_CONSOLE=y`、`CONFIG_PSTORE_RAM=y`。所以 run09 后 `/sys/fs/pstore` 为空不能归因于 reader 没有 pmsg 前端；写入是否到达/保留于 `0xb0200000` 仍未解决。kernel/config 哈希和复现命令见 [pmsg reader 配置审计](reports/elish-pmsg-reader-config-20261125.md)。
+- 本轮没有设备 USB 探测或设备命令；最近一次 09:07 CST `lsusb`、fastboot 与 ADB 快照仍未枚举平板。当前无新启动阶段证据。最近直接阶段仍为 run09 照片确认 XNU 到 pre-MMU；run06/run11 直接日志确认 FAT payload、DarwinBoot、256 MiB 窗口和成功 EBS。MMU 完成、UFS/SMMU、APFS root 和 iPadOS 用户态尚未验证。
+- fastboot 恢复后仍先 RAM-only 启动 run17（`/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run17-printf-init/boot.img`，67,751,936 字节，SHA-256 `3bcc3f62f519b96a5b56fd47da752a68c168b3f63e5c17c36a3bf8e92c9d6f7e`），然后 boot reader 并分别检查 `pmsg-ramoops-0` 和 `console-ramoops-0`。若仍无记录，再确认 reader 是否能只读导出 pmsg 保留区；不要将空 pstore 当作阶段证据。
+
+## 最新交接 · 2026-11-25 09:07 CST
+
+- 完成 iPadOS 17.7.11 (`21H461`) 主机打包，命令 `./scripts/package.sh --no-deps --os ipados-17.7.11-21H461 --uefi /root/repo/uefi-elish --out /root/elish-build-20261125/UniXNU/out -j 8`。实际产物在 `/root/elish-build-20261125/UniXNU/out/elish/ipados-17.7.11-21H461/elish/boot/boot.img`（67,747,840 字节，SHA-256 `baa41e0a3b5b0e3c77f97b59af4904a6ec8fdad0afccdf7b401348da0c8e0140`）；FAT payload `payload/payload.img` SHA-256 `9aaca2b53648d2dd8bb9ae7f362b8069c951e1f6760c048f8b8b18e45b5f3821`；`kernel.macho` SHA-256 `acb92e0807afc554567d99f0e0105cf8d15abb45ce108b064afdc7e64b79638b`。包内 FD SHA-256 `286fd558b9988a7e9c6e9dbde30cf10b9a62a2ba5c0e379db1efbc102ec230`。详细产物、revision、日志与验证见 [主机打包和设备状态](reports/elish-host-package-20261125.md)。
+- 当前主机 `lsusb -d 18d1:d00d`、fastboot 37.0.3 `devices -l` 和 `adb devices -l` 均未枚举平板；因此没有发 fastboot 命令、传镜像、重启/复位、`fastboot continue` 或写分区。顶置摄像头 09:07 帧近乎全黑，不据此判断屏幕或设备状态。遵照“设备探测不到时暂停探测”，转做离线核验。
+- 主机检查通过：Android v3 image / manifest / FD / payload 哈希一致，`fsck.fat -vn` 未报告错误，`check-elish.py --static-only`、14 区域移植记录检查、`git diff --check`、UniXNU `test_bootimg.py`（1 项）和 `test_boot_template.py`（13 项）通过。XNU `loadable=false`，relocation、register-dataflow、ABI、runtime 资格仍为 false；payload 与 boot manifest 的 `hardware_tested=false`。该镜像本轮没有上机。
+- 新核对 UniXNU 的 UFS 资料：catalog `ShengUfs` 限定 SM8550；cupid 的 SM8450 端口也记录了不能直接套用该驱动，并需按 SoC 核实时钟、SMMU 与状态接管。elish 的 Kona GCC/RPMh clock 与 reset ID 已静态映射，但运行时投票、PHY 序列和 UFS stream 仍未知，继续禁用 UFS DMA。不得将 alioth `0xe0/0x4e0` 或 cupid `0xe0` 认作 elish stream。
+- 本轮无新启动阶段证据。最近直接确认仍是 run09 近照中的 XNU pre-MMU 阶段；run06/run11 直接日志确认 FAT payload、DarwinBoot、256 MiB 窗口和成功 EBS。MMU 完成、设备端 APFS root 与 iPadOS 用户态未确认。设备重新枚举且 fastboot 控制请求响应后，先 RAM-only 启动 run17（`/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run17-printf-init/boot.img`，SHA-256 `3bcc3f62f519b96a5b56fd47da752a68c168b3f63e5c17c36a3bf8e92c9d6f7e`），再按既有 reader 流程取 root ADB/pstore。run17 尚未启动。严禁从 UniXNU 菜单选择“返回系统”；退出时只直接重启。
+
+## 最新交接 · 2026-11-25 08:50 CST
+
+- 用户确认设备可进入 fastboot，但本轮主机 `lsusb` 和 fastboot 37.0.3 `devices -l` 均未枚举平板；本机记录中的 `/tmp/elish-platform-tools/platform-tools/adb` 路径也不存在。未发送 fastboot 控制请求、未传输镜像、未重启或复位，等待 USB 重新枚举。顶置相机 `/tmp/elish-current-device-state-20261125-0844.jpg`（1920x1080，SHA-256 `8a57ecd29cd38af7ce6a3410dae43b2410a242cb8b61e512fcec2139791673cf`）近乎全黑；临时将相机亮度调至 220 后仍无法辨认，随后恢复默认 128。此画面不证明设备关机或处于任何特定启动阶段。
+- 离线检查 XNU revision `d8b80295118ef25ac3a784134bcf95cd8e88109f`：`PE_init_printf(FALSE)` 仅设置 `PE_putc = console_write_char` 后返回。run16 的探针在该调用前等待并复位；run17 设计为调用后等待并复位，能区分是否返回，但不能证明输出后端工作或后续平台初始化成功。run17 镜像未变化，SHA-256 `3bcc3f62f519b96a5b56fd47da752a68c168b3f63e5c17c36a3bf8e92c9d6f7e`，仍待 fastboot 可用后 RAM-only 测试。
+- 新增 stock Kona GCC 时钟及 reset 对照：九个 UFS host clocks 已逐项对应到 `qcom,gcc-kona` binding ID 和寄存器偏移；`ref_clk` 实际来自独立 RPMh provider，`core_reset` 是 GCC reset ID 33 / `0x77000`。来源为 stock ROM DTBO entry 12 与 Xiaomi Android R `elish-r-oss` commit `52a2f180865f8368828985d6384130acd093fa93`。这是静态映射，不给出运行时 clock/rpmh 状态、PHY 初始化顺序或 UFS SMMU 所有权；继续保持 UFS/DMA 未启用。详见 [Kona UFS 映射](reports/elish-ufs-kona-clock-map-20261125.md)。
+- 最近的直接启动阶段仍是 run09 用户近照确认 XNU 到 MMU 前。run14–run16 时序仅为间接证据；run17 未运行。FAT payload、DarwinBoot、256 MiB 窗口和成功 EBS 仍由 run06/run11 日志直接确认；设备端 APFS 根卷和 iPadOS 用户态未验证。详见 [时序与离线核对](reports/elish-run14-run17-xnu-timing-20261125.md)、[UFS 主机审计](reports/elish-ufs-host-audit-20261125.md)。
+
+## 最新交接 · 2026-11-25 07:53 CST
+
+- run14–run16 的 RAM-only XNU 时序测试补充了间接阶段证据。run14 镜像 `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run14-vm-return-30-image/boot.img`，SHA-256 `499bf02f87858aef0062fbf6dbedecdaec57d9ad9db906ab368079692afbbb6f`；一次运行约 43 秒后重新枚举 fastboot，但后续重传卡在 USB bulk transfer、没有 `Sending OKAY`/`Booting OKAY`，所以不把时序当成直接的 `_arm_vm_init` 返回证明。run15 `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run15-console-create/boot.img` SHA-256 `cfcdf0e2e7d0ff1f384537c9834321f7d15bd008e95a7db0fad940a9097b618b`，在 `_PE_create_console()` 后等待 15 秒再 PSCI reset，约 27 秒后回到 fastboot。run16 `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run16-before-printf/boot.img` SHA-256 `6922981c36442748a8cdd97e657875e9e5409f5ce28f72d9b9c75fae0ecf81d0`，在 `_PE_init_printf` 调用点前等待 15 秒，约 28 秒后回到 fastboot。后两轮时序支持控制流越过 `_arm_vm_init()` 及到达后续调用点，但没有屏幕/串口的直接确认。
+- run17 `PE_init_printf()` 后等待 15 秒的镜像已构建：`/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run17-printf-init/boot.img`，67,751,936 字节，SHA-256 `3bcc3f62f519b96a5b56fd47da752a68c168b3f63e5c17c36a3bf8e92c9d6f7e`。两次启动命令返回 `unknown command`，未见镜像被 bootloader 接受；后续 reader 传输卡住。run17 尚未运行，不能证明 `PE_init_printf()` 或更后阶段。
+- run14–run16 后通过 root ADB reader 读取的 `/sys/fs/pstore` 为空；ramoops 为 `0xb0000000+4 MiB`、`record_size=0`，内核报告 `Invalid compression size for deflate: 0`。该空目录不能作为标记未执行的证据。XNU 源码快照 revision `d8b80295118ef25ac3a784134bcf95cd8e88109f` 显示 `arm_vm_init()` 在新 TTBR/TLB 切换后还运行 AuxKC、`pmap_bootstrap()` 和 L3 映射；所以当前仍没有 `_arm_vm_init()` 完成的直接证据。run09 照片仍是最新直接阶段证据：XNU 到 MMU 前。
+- 用户本轮无法提供屏幕照片。07:53 CST 顶置相机帧 `/tmp/elish-current-state-followup.png`（SHA-256 `a782ae8c5e04db2822d03c06b2da9e934c280386d3d64952aeedc2ce07b18468`）欠曝，不能辨认启动阶段。主机短暂列出 fastboot USB `18d1:d00d`、serial `4bed07e4`，随后只读 `getvar product` 返回 `usb_read failed: No such device`；ADB 为空。此后停止设备协议操作，没有重试传输或复位。未写分区、未运行 `fastboot continue`、未发送关机命令。完整路径、哈希和证据边界见 [run14–run17 时序报告](reports/elish-run14-run17-xnu-timing-20261125.md)。
+- 当前最后直接确认的阶段仍是 run09 用户近照中的 XNU MMU 前标记。MMU 完成、UFS/SMMU 所有权、设备侧 APFS 根卷挂载及 iPadOS 用户态未验证。fastboot 控制通道恢复后优先 RAM-only 启动已构建 run17，再用 reader 检查日志；如仍无直接阶段证据，在 `_arm_vm_init()` 内设置窄范围检查点。
+
+## 最新交接 · 2026-11-25 07:12 CST
+
+- 用户确认设备可进入 fastboot，但本轮没有屏幕近照。07:06:55 主机只读快照枚举到 USB `18d1:d00d`、serial `4bed07e4`；ADB 无设备。fastboot 37.0.3 的 `devices -l` 能列出 serial，但随后 `getvar product` 在 8 秒超时（退出码 124），没有返回产品值。当前可见 USB 枚举不代表 fastboot 控制通道可用。
+- 未重传 run14、未重启/复位设备、未写入分区，也未发送关机或 `fastboot continue`。run14 候选 `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run14-vm-return-30-image/boot.img`（67,751,936 字节，SHA-256 `499bf02f87858aef0062fbf6dbedecdaec57d9ad9db906ab368079692afbbb6f`）本轮未启动。顶置摄像头单帧 `/tmp/elish-current-state.png`（640x480，SHA-256 `95bb6002b989b62437beb87bce02d492d8a6b6ea9114b850de875e7970416dba`）近乎全黑，不能判断屏幕阶段。
+- 本轮没有新增启动阶段证据。最近直接证据仍是 run09 照片确认 XNU 已执行到 MMU 前标记；`_arm_vm_init` 返回、UFS/SMMU 交接、设备端 APFS 根卷挂载及 iPadOS 用户态未确认。主机打包预检解析 63 个补丁、静态板级预检和 14 区域移植记录校验通过，`git diff --check` 通过；这些结果不代表实机启动验证。现有 fastboot 控制请求无响应期间停止进一步设备协议命令，继续离线工作。详见 [fastboot 只读状态复核](reports/elish-fastboot-readonly-status-20261125.md)。
+
+## 最新交接 · 2026-11-25 06:55 CST
+
+- run14 30 秒 `_arm_vm_init` 返回探针重试，镜像 `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run14-vm-return-30-image/boot.img`，67,751,936 字节，SHA-256 `499bf02f87858aef0062fbf6dbedecdaec57d9ad9db906ab368079692afbbb6f`。本次使用系统 `/usr/bin/fastboot` 34.0.5；06:43:25.700 开始传输后停在 `Sending boot.img (66164 KB)`，到 06:43:59 主机进程处于 `usbfs_start_wait_urb`，没有 `Sending OKAY` 或 `Booting OKAY`。Ctrl-C 后进程退出码 130。此前 `getvar product` 正常返回 `elish`，其他查询变量由 bootloader 报 `Variable not found`。
+- 失败后 06:44:51 USB 仍枚举为 fastboot `18d1:d00d`，fastboot 进程和 ADB 均未运行。48 秒顶置摄像头录像 `/tmp/elish-run14-overhead.mkv`（640×480，SHA-256 `e7c59fbda0919ed82d642b62725d8f6097d12e19db5ebd526918beb45e4ff6d5`）末帧过暗，无法识别屏幕阶段标记；本轮没有新的启动阶段证据。
+- 本次没有传完镜像，未写设备分区、未发 PSCI/关机命令、未运行 `fastboot continue`。最新直接阶段仍是 run09 照片确认的 XNU MMU 前标记；`_arm_vm_init` 返回、UFS/SMMU、APFS 挂载和 iPadOS 用户态未确认。暂停 fastboot 请求并继续离线分析。之前通过的 fastboot 37.0.3 位于 `/tmp/elish-platform-tools/platform-tools/fastboot`；后续设备测试需使用该版本并先确认大镜像传输恢复。详见 [run14 传输复测](reports/elish-run14-fastboot-retry-20261125.md)。
+- XNU 源码顺序确认 `_arm_init` 在 `_arm_vm_init` 返回后还经过低区映射、debug inheritance、`serial_init()` 和 kprintf 初始化；run12 标记位于更后的 `_PE_init_printf` 调用，因此缺标记不能单独指向 VM-init。`_arm_vm_init` 本身在新 TTBR/TLB 切换后仍执行 AuxKC、`pmap_bootstrap()` 和 L3 映射，函数返回才代表这段完整完成。另查 UniXNU UKE 设备记录 revision `5ed46420025be331b51d98207ea6aa679faac9c7`：同类 `_arm_vm_init` 复位候选仅构建、未实机验证；其 framebuffer 文本环未产生新标记，记录指出 `PE_state.video` 物理地址与 `video_console` 映射地址不同，不直接复用该屏幕环方案。
+- 06:54 使用已验证的 fastboot 37.0.3 对同一 serial 执行只读 `getvar product`，8 秒超时且无输出。06:55:27 USB 仍枚举 `18d1:d00d`，没有 fastboot 进程或 ADB 设备；未重试镜像传输、未做 USB reset 或设备重启。当前是 USB 设备可见但 fastboot 控制请求无响应，停止设备协议探测并继续离线工作。
+
+## 最新交接 · 2026-11-25 06:33 CST
+
+- run12 的屏幕照确认绿色 handoff、蓝色 XNU entry、品红色 MMU 前带；post-MMU 标记不可见。reader pstore 为空，仍有 record_size=0 的 deflate 警告。详情见 reports/elish-run12-postmmu-console-20261125.md。
+- 新增 _arm_vm_init 返回探针。run13 的 15 秒版镜像 /root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run13-vm-return-image/boot.img（SHA-256 05b8620d4ccc74e95bccb3fef0edc71946d205036e0fd71da005361a2ff459b9）RAM-only 启动成功；fastboot 在命令结束后约 13.9 秒重新枚举。这个时序接近配置等待值，不能独立证明函数返回。
+- run14 30 秒差分镜像已构建，SHA-256 499bf02f87858aef0062fbf6dbedecdaec57d9ad9db906ab368079692afbbb6f；fastboot 传输卡在 usbfs_start_wait_urb，没有 Booting OKAY。中断主机进程后设备仍枚举为 fastboot，随后的 getvar 也卡住。
+- 当前设备保持开机并处于 fastboot USB 18d1:d00d；最后一次成功的 product=elish 查询在 run14 传输前。ADB 未枚举。本轮未写分区、未运行 fastboot continue，也没有发关机命令。待 USB 协议恢复后再测 run14。
+- 最新直接阶段仍是 XNU 执行到 MMU 前。MMU 初始化返回、UFS/SMMU、APFS 挂载和 iPadOS 用户态都未确认。详情见 reports/elish-xnu-vm-return-isolation-20261125.md。
+
+## 最新交接 · 2026-11-25 06:10 CST
+
+- run12 post-MMU console 镜像已 RAM-only 启动并复测。镜像 `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run12-postmmu-console/boot.img`，67,756,032 字节，SHA-256 `49460e8b7aabf22dc6e921e3435ab47811c9dbd4cfe27b1880a5858d786f324a`；payload SHA-256 `b35392da63b9448093c497cfa7395704dfbcdf8fe554a5dc79c1a9c1a6d180f6`；补丁内核 SHA-256 `5678c2cce3e27df5308ea34936583c5d76ea78c4c84fdd3a6d7c30b6e6a20f42`。它在 `_arm_vm_init` 返回及控制台初始化后打印 `ELISH_POST_MMU_VM_INIT_CONSOLE_READY`，等待 15 秒后 PSCI reset。
+- 用户近照 `/root/repo/86D644D8053EE3CF1BB0D8414E2EBB4D.png`（SHA-256 `51420af2d0b488f94776c6e19711e238af87f798a7ddeac91d927f53739aa2d4`）能确认绿、蓝、品红三条带；下方仍是 loader/capsule 固件日志，没有可见 post-MMU 标记。复测中 fastboot 37.0.3 接受镜像（Sending/Booting OKAY，1.760 秒），约 6.9 秒后 USB 回到 fastboot；reader Android 的 arch_timer 为 19.20 MHz，与 15 秒计数基准一致。时序不支持已进入 15 秒等待段，但不能单独定位停止点。25 秒顶置摄像头录像 SHA-256 `c01c3c7582fbe7a7e48b4d152ddd3bc07864590e97b5d6f4c8467bd9baffd52c`，画面太暗，无法辨读屏幕。
+- 已用校验通过的 LineageOS reader RAM-only 启动，root ADB 返回 `lineage_elish` / `elish`。`/sys/fs/pstore` 为空；dmesg 显示 ramoops `0xb0000000+0x400000`、`record_size=0` 和 `Invalid compression size for deflate: 0`，没有恢复 run12 检查点。当前设备保持开机、处于 root ADB；活动槽仍为 `_b`。本轮没有写设备分区，也没有运行 `fastboot continue`。
+- 最新直接阶段证据仍是 XNU 已执行到 MMU 前。run12 没有证明 `_arm_vm_init` 返回或 post-MMU 控制台可用；停点可能在该函数内，也可能在随后的控制台/检查点路径。UFS/SMMU、设备端 APFS 挂载和 iPadOS 用户态仍未验证。详情见 [run12 报告](reports/elish-run12-postmmu-console-20261125.md)。
+
+## 最新交接 · 2026-11-25 05:08 CST
+
+- run11 只读 context-bank 探针通过 RAM-only fastboot 启动，随后按设计重启回 fastboot；已用哈希核验的 reader 恢复 root ADB 并取回本轮日志。镜像 `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run11-smmu-context-readonly/boot.img`，67,751,936 字节，SHA-256 `9e6dbce96f9551c56265c375a05877d3b0fcbc283b9c03c322987f8ca18f8767`；raw pstore 49,439 字节，SHA-256 `f16b04efae4fb5859b84b7f6351fe970de52d2b89cfaf7f3525a5239a48b8600`。当前 live root ADB 读回与归档同 hash，详见 [SMMU 报告](reports/elish-smmu-readonly-probe-20261125.md) 和 [run11 原始日志](reports/elish-run11-smmu-context-console-ramoops-20261125.txt)。
+- run11 扫描 87 个 apps-SMMU group，仅 group 4 有效：SID `0x0820`、mask `0x0402`、S2CR type 0、context bank 4。bank 4 的 `CBAR=0x1f000`（type 1，S1 translation/S2 bypass）、`SCTLR=0xe0`（M bit 0 为 0）、`TTBR0=0`、`TCR=0`、`FSR=0x400`。这没有启用的 S1 页表；FSR 保留原始值。仍不能把 SID 归属到 UFS，也不能据此判断 UFS DMA 已可用。
+- run11 再次直接确认 FAT payload、DarwinBoot、256 MiB 窗口 `0xc007c000+0x10000000` 与 EBS Success；key `0x3ee`、accepted snapshot 一致，map 72 条（`0xD80/0x30`）。探针在 EBS 后明确停止，XNU 未进入。综合阶段仍以 run09 用户近照为准：XNU 已执行到 MMU 前，MMU 后未独立确认。
+- 本轮没有写入设备分区、未运行 `fastboot continue`。当前设备 Android 13 `lineage_elish`、root ADB、活动槽 `_b`；fastboot 未枚举，`console-ramoops-0` 保存 run11 日志。下一步独立确认 XNU MMU 后阶段；并通过 elish 固件/SoC 来源将 SID/context 和 UFS 对应起来，再核实 UFS 时钟、reset、PHY 与 DMA 路径。
+
+## 最新交接 · 2026-11-25 04:42 CST
+
+- RAM-only 启动 run06 只读 SMMU 探针后，经已校验的 LineageOS reader 取回 `console-ramoops-0`。测试镜像 `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run06-smmu-readonly/boot.img`，67,751,936 字节，SHA-256 `dc552b5eb9a2795f1de63abd3f48ab02003add18d2bd26b153f4af1789d0e24f`；pstore 为 49,328 字节，SHA-256 `fdaa24dcf70d4dbb41d63a49b2c705b8f7c33517128135c8439d56d6a9b1d7b2`。主机归档与当前 root ADB 文件逐字节一致，详见 [SMMU 探针报告](reports/elish-smmu-readonly-probe-20261125.md) 和 [原始日志](reports/elish-run06-smmu-console-ramoops-20261125.txt)。
+- run06 直接确认 FAT initrd block device 和未对齐 FAT 子卷已发布；DarwinBoot 打开 `unixnu.toml`、`kernel.macho` 与 ADT，选择 `xnu`，分配 `0xc007c000+0x10000000` 的 256 MiB 窗口。`ExitBootServices()` 返回 Success，接受的 map snapshot 与 key `0x3ee` 一致；`0xD80` 字节、stride `0x30`，共 72 条描述符，最后一条为 `0xB0000000+0x400000` 保留区。run06 探针随后按设计停止，明确记录 XNU 未进入。
+- run06 只读扫描 apps-SMMU 的 87 个 stream group，仅 group 4 有效：raw `SMR=0x84020820`、`S2CR=0x4`、type 0、context bank 4。原诊断字符串误把 bit 31 的 VALID 计入 MASK；按 SMMUv2 bits 30:16 正确解码 mask 为 `0x0402`、SID `0x0820`，匹配 `0x0820/0x0822/0x0c20/0x0c22`。此项仍不能归属 UFS。UEFI 探针源已修正解析，修正不在 run06 已测镜像中。
+- 本轮无设备分区写入、未运行 `fastboot continue`。当前设备经只读核对为 Android 13 `lineage_elish`、root ADB、活动槽 `_b`；fastboot 未枚举，`/sys/fs/pstore/console-ramoops-0` 仍与 run06 归档同 hash。run09 屏幕仍是最新 XNU 阶段证据：已到 MMU 前，MMU 后未独立确认。下一步确认 MMU 后 checkpoint，再根据 elish 证据确定 SMMU stream/context、UFS 时钟/reset/PHY；不可凭这一个 mapping 启用 UFS DMA。
+
+## 最新交接 · 2026-11-25 04:16 CST
+
+- 本次将 run09 写入活动槽 `boot_b` 进行一次启动测试，之后已用完整备份恢复该分区。两次 flash 均返回 `Sending OKAY` / `Writing OKAY`；原备份 SHA-256 为 `fce50614e0f90a4fd42b1eef26b913712883e4133723b802b4ac65a8dd1dd890`。未运行 `fastboot continue`。
+- 用户近照 [run09 屏幕](reports/elish-run09-screen-20261125.jpg)（SHA-256 `ebec55fc542f9cfbc754ae8c36895c69a45e453679206949dec9695d0464f1bd`）同时显示绿色 EBS、蓝色 XNU 入口和品红色 MMU 前阶段条，直接确认 XNU 已执行到 MMU 前检查点。该镜像含有 MMU 后 6 秒 PSCI 复位，但 pmsg 标记未恢复；回到 fastboot 与复位相符，不能单独证明 MMU 已开启。
+- 已用哈希核验的 LineageOS reader RAM-only 启动，root ADB 恢复为 `lineage_elish` / `M2105K81AC` / `elish`。`/sys/fs/pstore` 为空；pmsg/console 数据未取回。当前设备处于 reader 的 root ADB 环境，原始 `boot_b` 已恢复。详情见 [入口可视复测](reports/elish-xnu-entry-visual-retest-20261125.md)。
+- 后续先查明 pmsg/console 为何未回读及 warm firmware re-entry 是否清除 ramoops，再验证 MMU 后阶段；UFS/SMMU、设备端 APFS 与 iPadOS 用户态仍未验证。
+
+## 最新交接 · 2026-11-25 03:46 CST
+
+- 最新主机快照显示 serial `4bed07e4` 已从 RAM-only 诊断启动返回 `lineage_elish` / `M2105K81AC` / `elish` root ADB，fastboot 未枚举。本轮两次仅 RAM 启动同一诊断镜像，没有写设备分区。测试记录见 [入口可视复测](reports/elish-xnu-entry-visual-retest-20261125.md)。
+- 入口可视诊断镜像 `elish-xnu-entry-reset.img`（67,727,360 字节，SHA-256 `441e30dcc04b350c8016668c85cc2f64f32b179fa70bb790b12ff15f69bfd121`）两次均获 `Sending OKAY` / `Booting OKAY`，耗时 1.835 秒与 1.765 秒；约 12 秒后 ADB 回到 LineageOS。两次 root pstore 均为空，deflate 警告依旧。16 秒低分辨率 V4L2 片段只显示暗屏和 `FASTBOOT` 字样，没有可辨认的蓝/品红标记，故 XNU 入口/MMU 仍未确认。未调用 `fastboot continue`。
+- UFS 在 Android 下处于 Gear 4、双 lane、FAST/Rate-A，Samsung `KLUEG8UHDC-B0E1`，`pa_err_cnt_total`、`dl_err_cnt_total`、`dme_err_cnt` 均为 0。apps-SMMU 有 87 个 stream-match groups，`ufshc_mem` 日志中的 handle 36 是 interconnect client handle，不是 SMMU stream ID；设备树没有 UFS `iommus`，不能据此选择 alioth stream。
+- 已按 LineageOS kernel revision `6b34d24765327d746074c8e53b5ad0d24a51acc7` 核对 pstore 源码：`record_size=0` 令 panic-dump deflate buffer size 为 0，从而出现 `Invalid compression size for deflate: 0`；console ring 仍配置为 2 MiB。该警告不解释空的 `/sys/fs/pstore`，所以 run08 XNU marker 仍未确认，空目录也不能证明未执行。
+- 目标距离判断：run08 画面确认到 DarwinBoot 的绿色 handoff；run04 日志直接确认成功 `ExitBootServices()`、256 MiB 窗口 `0xc007c000+0x10000000`、key `0x3ee`、73 个描述符。XNU 第一条指令、MMU/内存交接、UFS/SMMU、设备端 APFS 挂载与 iPadOS 用户态都没有实机证据。还需跨过多个核心启动门槛，不能按单个故障修复估算。详见 [复核报告](reports/elish-pstore-ufs-live-20261125.md)。
+
+- 用户报告设备已启动到 fastboot。初次主机枚举序列 `4bed07e4`，USB `18d1:d00d`，`fastboot getvar product` 返回 `elish`。
+- 此前旧版 fastboot 的 reader 传输曾卡在 `usbfs_start_wait_urb`；改用已校验的 fastboot 37.0.3 后 reader RAM-only 启动成功。Reader 为 55,083,008 字节，SHA-256 `57dbb98dec813b2a8c7bbd67a59f715aa1abf366905a24270aba594ec4ca44c4`。ADB 恢复为 `lineage_elish`，`adb root` 成功。
+- 用户报告设备再次进入 fastboot 后，序列 `4bed07e4` 枚举为 `18d1:d00d`，37.0.3 的 `getvar product` 返回 `elish`。修正版 run08 以 RAM-only 方式启动，`Sending OKAY` / `Booting OKAY`，耗时 1.760 秒；boot.img SHA-256 `9cd0577439a5f143ff11d81cdaa6aece79da01a25cfd5cfdf67ddea0a7a5075a`。约 10 秒后主机未见 ADB、fastboot 或 USB 设备，停止探测。
+- 用户照片 `/root/repo/D5E326E8269942AF9C00495CFD941302.png`（SHA-256 `2d94beff27bbe43fd9f7d5832303debd0bb3b9946c2935d8e791921a6dde4a2c`）可读到 `Exiting boot services. A green bar across the top marks the loader handoff before the kernel branch.` 这确认屏幕停在成功 EBS 后、XNU 分支前，不确认 XNU 第一条指令。
+- 用户随后提供近照 `/root/repo/21A164FDA8C43322023FEFA8F6331EAF.png`（SHA-256 `1fbd8b10ec5bd3c17d7ebc960d909ee9232a8929d549c740e7179de224a6f9a4`），归档为 `reports/elish-run08-screen-20261125.jpg`。照片显示绿色 EBS handoff 画面；屏幕阶段不等于 XNU 入口。V4L2 仅用于确认大致画面状态，不用于辨读日志。
+- 之后用户再次报告 fastboot，主机枚举 `4bed07e4` 并核验 `product=elish`；fastboot 37.0.3 成功 RAM-only 启动 reader。root ADB 的 `/sys/fs/pstore` 已挂载但为空；dmesg 有 `ramoops: attached 0x400000@0xb0000000`、pstore backend 注册和 `Invalid compression size for deflate: 0`。未取回 run08 marker；压缩元数据异常使空目录不构成未执行证明。当前设备经 reader 回到 root `lineage_elish`。
+- Run08 镜像、构建输出、pstore 结果与照片观察见 [run08 报告](reports/elish-xnu-entry-checkpoint-run08-20261125.md)。
+- 本轮离线 NativeUfs 主机测试：GPT/root layout、窗口读取、root 发布和合成 SMMU 测试通过；临时修正测试 shim 后，QEMU ARM64 命令测试 5 个 DMA 情况和 14 个历史描述符比较均通过。超时诊断为合成故障注入。测试只验证主机逻辑，不提供 elish UFS/SMMU 硬件证据。结果见 [UFS host audit](reports/elish-ufs-host-audit-20261125.md)。
+- 阶段边界：run04 仍是最后一份持久日志直接记录 `ExitBootServices()` 成功的运行，256 MiB 窗口 `0xc007c000+0x10000000`、key `0x3ee`、73 描述符。run08 RAM-only 启动后屏幕显示绿色 handoff；没有 XNU 第一条指令、MMU 开启、UFS/SMMU、APFS 挂载或用户态的直接证据。本轮没有设备分区写入。
+
+目标仍是在 elish（M2105K81AC，SM8250-AC）上运行 iPadOS 17.7.11（21H461），当前未完成。以下是最新实测结果；后面的日期章节保留历史观察，不能替代本节。公开命令使用 `ELISH_SERIAL` 占位符。
+
+- **FAT 配置发现已修复。** ABL 将 18,811,579 字节 gzip vendor ramdisk 拼在 64 MiB FAT 前，偏移 `0x11f0abb` 不按扇区对齐。运行时探针直接记录了 gzip 首字节和 FAT 偏移。共享 UniXNURamDiskDxe 现在保留完整原始 initrd，并发布只读 FAT 子卷；DarwinBoot 支持从相对偏移子卷验证完整父卷。详见 [本轮报告](reports/elish-loader-fat-initrd-20261124.md)。
+- **DarwinBoot 和成功的 EBS 已直接确认。** `run04-fat-child/boot.img`（SHA-256 `8ef2e0a78c37171b74d50601703aa94b2f8ec7ed7a1aed00fbb0aebfb2bb33e7`）读取 FAT 的 `unixnu.toml`，三秒后自动选择 `xnu`。DarwinBoot 取得 `0xc007c000+0x10000000` 窗口，EBS 返回 Success，key `0x3ee` 与固定缓冲快照一致，73 条描述符已保存。该探针在 EBS 后主动重启，**没有执行 XNU**。[完整日志](reports/elish-darwinboot-ebs-20261124.txt)
+- **run05 检查点仍待 pstore。** `run05-xnu-before-mmu-inputs/firmware/boot.img`（SHA-256 `14c3bf7d50c7e5fb35151d312efa144bdaf648a557fcaf098c2044193b191b32`）曾在 EBS 后放行 XNU，之后未返回 USB；该轮 ramoops 标记尚未知，不能声称检查点执行或内核启动成功。
+- **2026-11-25 屏幕与入口复测。** 用户照片 `/root/repo/FCAB2A776FDB44AE9E8A5920E572CC64.png`（SHA-256 `c1eb7499267cf31e0d69ce29396d2d5dac20759be94b6f0ad0118f1a35a82fc9`）显示 DarwinBoot 的 256 MiB 窗口、`entry words 140006F5 ...`、CPU 状态与绿色交接带。绿带确认 `ExitBootServices()` 后到达 DarwinEnter；照片没有蓝/紫入口条，不能确认 XNU 第一条指令执行。照片对应的启动镜像未知，不归属于 run05。
+- fastboot 实际枚举 `18d1:d00d`，序列 `4bed07e4`，`getvar product=elish`。用已核验的 reader 镜像 `backups/lineage-reader-boot.img`（SHA-256 `57dbb98dec813b2a8c7bbd67a59f715aa1abf366905a24270aba594ec4ca44c4`）RAM 启动后，ADB 识别 `lineage_elish` / `M2105K81AC` / `elish`；`adb root` 成功，`/sys/fs/pstore` 为 `total 0`。run05 检查点状态仍未知，空 pstore 不能证明未执行。
+- 之后 RAM 启动六秒可视化 XNU 入口镜像 `out/elish/ipados-17.7.11-21H461/elish/boot/diagnostics/elish-xnu-entry-reset.img`，SHA-256 `441e30dcc04b350c8016668c85cc2f64f32b179fa70bb790b12ff15f69bfd121`。Fastboot `Sending`/`Booting OKAY`；ADB 随后回到 `lineage_elish`，重新 root 后 pstore 仍空。主机没有屏幕捕获；用户对蓝/紫条的观察待回复，因此 XNU entry/MMU 仍未确认。没有调用 `fastboot continue`，没有写设备分区。详见 [入口复测报告](reports/elish-xnu-entry-retest-20261125.md)。
+- 用户随后报告设备已进入 fastboot；主机紧接着复核时 `fastboot devices -l` 为空，`adb devices -l` 仍显示 `4bed07e4` 为 `lineage_elish` / `M2105K81AC` / `elish`。root ADB 的 `sys.boot.reason=bootloader`，`/sys/fs/pstore` 无文件。这只确认经 bootloader 启动的 Android，不确认采样时处于 fastboot；本轮未发送重启或 fastboot 命令。入口照片只显示 EBS 后绿带，没有蓝/紫条。详见 [入口复测报告](reports/elish-xnu-entry-retest-20261125.md#host-check-after-the-users-fastboot-report)。
+- **run07 入口 ramoops 检查点已 RAM 启动。** 镜像 `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run07-xnu-entry-checkpoint/boot.img`（67,751,936 字节，SHA-256 `38b548e03d2a0156f443e010cfdecca2becd7bc745f911a56dbb99e1b99c1e37`）获 fastboot `Sending OKAY` / `Booting OKAY`。入口检查点仅在 `SCTLR.M=0` 且 ramoops 环形缓冲区头有效时写标记，否则直接 warm reset。之后 USB 出现 `18d1:4e11`，又出现 fastboot `18d1:d00d` 并再次断开；没有取得本轮 pstore，时序不能证明标记执行。报告记录检查点代码哈希、FD 和 payload 哈希及 USB 时序：[run07 报告](reports/elish-xnu-entry-checkpoint-20261125.md)。
+- **入口检查点 writer 已完成离线核对。** 对照 Linux v4.19 `persistent_ram_buffer` 与 elish `RamLogWrite` 后，确认 `start == size` 表示 console ring 未环绕。修正了生成脚本在 marker 恰好写到容量末尾时未把 `start` 回绕到零的边界。原 run07 镜像未改（260 字节检查点）；修正后在临时内核副本上生成 276 字节检查点，kernel SHA-256 `0ad2ca17724f66adf25afd473008e9c47842c2b00d55d8b1ec79ba6c40b9086f`。修正版随后构建为 run08 并已 RAM-only 实测，但未从 pstore 找回标记。详见 [run07 报告](reports/elish-xnu-entry-checkpoint-20261125.md#ramoops-format-audit-and-tool-correction) 与 [run08 报告](reports/elish-xnu-entry-checkpoint-run08-20261125.md)。
+- 先前一次 USB 快照没有枚举到设备；用户再次报告进入 fastboot 后，本轮枚举并核验了 `product=elish`。reader 传输后 USB fastboot 查询也出现不一致响应，尚未取回 pstore；用户重连 USB 前不再提交镜像。
+- **UFS/SMMU 离线准备已构建。** 新的只读 SMMUv2 DXE 探针默认关闭，不写 SMMU/UFS 寄存器，只读取 apps-SMMU ID0/ID1 和有界的有效 SMR/S2CR。`run06-smmu-readonly/boot.img` SHA-256 `dc552b5eb9a2795f1de63abd3f48ab02003add18d2bd26b153f4af1789d0e24f`，FD SHA-256 `6067d8dcc754b6a8f6fa71ec8bc5e6fc8bdc9c319b06a4addf1c02d72ab754b5`。构建成功但尚未在设备运行。先完成 XNU 入口观察，再运行此探针并在下一次固件启动前读取 pstore。详见 [SMMU 探针报告](reports/elish-smmu-readonly-probe-20261125.md)。
+- **日志读取使用 reader 镜像。不要运行 `fastboot continue`。** 它曾导致 USB mass storage 或关机。活动槽 boot_b 和 vendor_boot_b 已备份并双端核对哈希，reader 只去除了 boot_b 尾部填充。run03/run04 均在枚举到 fastboot 并核验产品后，用 `fastboot boot backups/lineage-reader-boot.img` 恢复 LineageOS，再 `adb root` 读取 pstore。不要选择 UniXNU 菜单的“返回系统”；需要退出时直接重启。进入 bootloader 通常需约 10 秒，必须依据实际枚举，而非五秒延迟。
+- **本轮设备分区写入为零。** 原始候选仍是 `out/elish-resume/.../boot/boot.img`（SHA-256 `c6581b4dcf531a55d6ad843c8ae8f3db41d6a24fe831b836fdaf3325b12c11fd`）。其 FAT 内容已经用修正固件实机读取，但其内核没有获得新运行资格；kernel.json 的 `loadable=false` 等字段仍保留。UFS/SMMU、APFS 根卷、用户态、触控、GPU 均未验证。
+
+### 工作区、补丁与产物
+
+| 用途 | 位置 |
 | --- | --- |
-| 设备仓 | `/root/repo/UniXNU-elish`，基础提交 `208b47d20e87d3876fd862bb1f0ee0c17467b0c2`，含未提交的板级配置、补丁和日志 |
-| UniXNU 核心 | `/root/elish-build-20261123/UniXNU`，`/root/repo/UniXNU` 指向该目录，基础提交 `71c5c6569bae6369c0e0f634df8b9bd5afc19139`，含未提交的构建支持改动 |
-| 固件 | `/root/repo/uefi-elish`，Mu-Silicium 基础提交 `66421cb7bb5694843aec8de1ca3d1de4c20cca38`，Mu_Basecore `cfb93724a06ff86ff5ba971413368a7809ee42a5`，含未提交的 elish 平台和 ramoops 实现 |
-| 本地输入 | 官方 ROM 在 `/root/repo/elish_os1.0.2.0`。核心的 `unixnu.local.toml` 保存本地构建输入及平台种子，文件由 Git 忽略 |
-| 新候选 boot image | 核心下 `out/elish-resume/elish/ipados-17.7.11-21H461/elish/boot/boot.img`，67,747,840 字节，SHA-256 `c6581b4dcf531a55d6ad843c8ae8f3db41d6a24fe831b836fdaf3325b12c11fd` |
-| 新候选构建清单 | 同一输出的 `package.manifest.json`、`kernel/kernel.json`、`payload/payload.img` 和 `boot/boot.json` |
-| 已上机镜像 | 核心下 `out/elish/ipados-17.7.11-21H461/elish/boot/{hii-before-console,memory-map-ramoops}/boot.img`。该目录根部的 `boot.img` 来自较早实验，使用新候选或上述明确子目录复现实验 |
+| 设备仓 | `/root/repo/UniXNU-elish`，基线 `4b3da68ea0aca815a80e8d1bad802dfec8d5c905` 加本轮未提交改动 |
+| UniXNU 核心 | `/root/repo/UniXNU` 指向 `/root/elish-build-20261123/UniXNU`，基线 `71c5c6569bae6369c0e0f634df8b9bd5afc19139`，保留原有未提交构建改动 |
+| DarwinBoot 子模块 | 核心 `drivers/DarwinBoot`，基线 `5243c68ec332a227fe3680cd5da6d5a0e127035c` 加父子卷校验和测试改动 |
+| 固件 | `/root/repo/uefi-elish`，基线 `f03839d31a3f07e9e4b032fcf850ac0dfb9961a0`；Mu_Basecore `cfb93724a06ff86ff5ba971413368a7809ee42a5` |
+| 本轮输出根 | `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/` |
+| 已确认 EBS 镜像 | 输出根 `run04-fat-child/{boot.img,SILICIUM_UEFI.fd,probe.json,device-commands.json,console-ramoops.raw}` |
+| 最新 XNU 阶段证据 | run09 `run09-xnu-pmsg-entry/boot.img`；用户近照确认到 MMU 前阶段，pmsg 未读回 |
+| 最近 RAM-only 测试镜像 | `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run11-smmu-context-readonly/boot.img`；见本节报告与 SHA-256 |
+| 最近回读 ramoops | `reports/elish-run11-smmu-context-console-ramoops-20261125.txt`；49,439 字节，SHA-256 `f16b04efae4fb5859b84b7f6351fe970de52d2b89cfaf7f3525a5239a48b8600` |
+| 最近一次恢复 pstore 的方法 | 用 fastboot 37.0.3 RAM-only 启动 `backups/lineage-reader-boot.img`，再 `adb root` |
+| SMMU 只读探针产物 | run06 `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run06-smmu-readonly/`；run11 `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run11-smmu-context-readonly/`；均已实机读取并归档 pstore |
+| 备份与 reader | 输出根 `backups/`。reader SHA-256 `57dbb98dec813b2a8c7bbd67a59f715aa1abf366905a24270aba594ec4ca44c4` |
+| 新补丁 | `patches/unixnu-fat-initrd.patch` 在核心根应用；`patches/darwinboot-fat-initrd.patch` 在 DarwinBoot 子模块根应用。当前工作区已应用，勿重复应用 |
+| 本地输入 | 官方 ROM 在 `/root/repo/elish_os1.0.2.0`；核心被忽略的 `unixnu.local.toml` 保存 IPSW 和平台种子，勿输出或提交其内容 |
 
-构建新候选的设备仓命令如下。
-
-```sh
-./scripts/package.sh --no-deps --os ipados-17.7.11-21H461 \
-  --uefi /root/repo/uefi-elish \
-  --out /root/elish-build-20261123/UniXNU/out/elish-resume --jobs 8
-```
+`board.toml` 的常规 `ELISH_LOADER_PROBE=FALSE`。`scripts/build-loader-probe.py` 创建独立影子板配置，不覆盖旧测试产物；默认在 EBS 后重启。只有 `--run-kernel` 才会放行终止型 XNU 检查点。探针超时为 20 秒，120 秒是另一份旧内存探针的参数。`scripts/patch-xnu-ramoops-checkpoint.py` 只对复制内核应用终止型检查点。
 
 ### 接手顺序
 
-1. 从 UniXNU 菜单确认 FAT payload 的 `xnu` 条目，然后定位 DarwinBoot。建议用独立诊断镜像尝试在 ramoops 写入 loader 状态、实际 256 MiB 窗口和 `ExitBootServices()` 返回结果，成功取得最终图后走已验证的主动热重启路径。**该诊断镜像还没有实现或构建。** 相关入口位于核心仓 `drivers/DarwinBoot/DarwinBootPkg/Driver/DarwinBoot.c`，可复用固件的 `RamLogWrite` 和 `RamLogRestartIntoFastboot`。板级常规配置为 `ELISH_MEMORY_MAP_PROBE=FALSE`，DEBUG 配置已启用 `ELISH_RAMOOPS_LOG`。
-2. 实机测试前使用 `/root/platform-tools/adb devices -l` 和 `/root/platform-tools/fastboot devices -l` 确认状态。已连到 LineageOS 时，先用 `adb -s ELISH_SERIAL root` 读取尚存的 pstore，再用 `adb -s ELISH_SERIAL reboot bootloader`。核验 `fastboot -s ELISH_SERIAL getvar product` 为 `elish`、核对镜像哈希后临时启动。热重启回 fastboot 时，用 `fastboot continue` 恢复 Android，随后以 root ADB 导出 `/sys/fs/pstore/console-ramoops-0`。`05c6:f000` 存储状态可能需要用户恢复 LineageOS 或进入带 ADB 的 Recovery，重启后日志有可能丢失。探测不到时按用户要求先做离线工作。 [已验证命令](reports/elish-uefi-pre-bds-memory-map-20261124.md#ram-partition-and-uefi-descriptors)
-3. 取得直接证据后推进 XNU 入口、异常日志和内核资格。再完成 SM8250 UFS 控制器及 SMMU/DMA 所有权、读取 GPT 与已核对的 APFS 卷、挂载根卷并验证 `launchd`。实测 `userdata` 为 LBA `6619136–61870314`，逻辑块 4096 字节。复用 enuma 的热重启日志链、pipa 的 Kona DXE 顺序，以及 alioth 的 SM8250 UFS 实现作为参考。elish 的 SMMU stream ID 仍需本机证据。 [硬件数据](reports/elish-live-hardware-20261123.md#ufs-and-userdata-gpt) · [参考移植](reports/elish-uefi-ramoops-20261124.md#reference-implementations)
+1. 当前设备为 root `lineage_elish`。`Invalid compression size for deflate: 0` 由 ramoops `record_size=0` 导致 panic-dump 压缩缓冲区为零；它不解释 run09 pmsg 未恢复。run06 的 `console-ramoops-0` 已由 reader 成功取回并与归档完全一致。离线核对发现 debug SEC 入口会调用 `RamLogReset()` 并重置 ring header，仍需区分不同启动路径下 console 与 pmsg 的生命周期。不要把空目录、USB 返回时间或绿色 handoff 屏幕当作 XNU 入口证据。
+2. 新 board 已启用 `payload.adt.loader_inputs=true`。run04 没有该属性；run05 Apple ADT 已主机解析并核对 `/chosen/darwinboot-loader-inputs` 的 64 个零字节，内核哈希 `91fa2b034920a7beb8b8892d3067236875140634699b3bdd00ba6184e07249ed` 与 FAT 回读一致。设备端的输入记录仍待 pstore。
+3. run09 用户近照确认 XNU 入口及 MMU 前阶段；run06 SMMU 探针已实机运行并通过 reader 取回 pstore。顶置 V4L2 只判断整体状态，不能辨读屏幕日志。
+4. 先独立确认 MMU 后 checkpoint，再用 elish-specific 证据把 SMMU stream/context 映射到 UFS，并核实 SM8250 时钟/reset/PHY。之后推进 UFS、GPT/APFS 和 launchd；userdata 几何为 LBA `6619136–61870314`、4096 字节块。不可套用 alioth stream 或 SM8550 时钟值。
 
 ## 2026-11-24 崩溃恢复后的主机检查
 

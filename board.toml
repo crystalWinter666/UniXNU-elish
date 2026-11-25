@@ -84,6 +84,8 @@ packages = [
 ENABLE_SECUREBOOT = "0"
 # The boot path obtains its memory map in DarwinBoot.
 ELISH_MEMORY_MAP_PROBE = "FALSE"
+# Separate diagnostic images may stop after DarwinBoot exits boot services.
+ELISH_LOADER_PROBE = "FALSE"
 # DEBUG firmware captures logs in the Android ramoops console.
 ELISH_RAMOOPS_LOG = "TRUE"
 MEMORY_PROTECTION = "TRUE"
@@ -133,6 +135,7 @@ kernel_args = [
 chip_id = "356"
 owned_memory_size = "0x10000000"
 owned_memory_excluded_ranges = 16
+loader_inputs = true
 packed_data_ramdisk = true
 ipad_identity = true
 root_match_volume_uuid = "04769D26-2CA0-4825-B443-E2E5F88300F2"   # Target OS profile's OS volume UUID.

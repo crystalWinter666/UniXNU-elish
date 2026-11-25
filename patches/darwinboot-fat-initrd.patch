@@ -1,0 +1,341 @@
+diff --git a/DarwinBootPkg/Driver/DarwinBoot.c b/DarwinBootPkg/Driver/DarwinBoot.c
+index f0f7650..0e05de9 100644
+--- a/DarwinBootPkg/Driver/DarwinBoot.c
++++ b/DarwinBootPkg/Driver/DarwinBoot.c
+@@ -4,6 +4,7 @@
+ #include <Library/BaseLib.h>
+ #include <Library/BaseMemoryLib.h>
+ #include <Library/DebugLib.h>
++#include <Library/DevicePathLib.h>
+ #include <Library/MemoryAllocationLib.h>
+ #include <Library/UefiBootServicesTableLib.h>
+ #include <Library/PrintLib.h>
+@@ -11,6 +12,7 @@
+ #include <Guid/HobList.h>
+ #include <Protocol/UniXNULoader.h>
+ #include <Protocol/BlockIo.h>
++#include <Protocol/DevicePath.h>
+ #include <Protocol/LoadedImage.h>
+ #include <Protocol/GraphicsOutput.h>
+ #include <Protocol/SimpleFileSystem.h>
+@@ -20,6 +22,7 @@
+ #include "WindowSize.h"
+ #include "MemoryWindow.h"
+ #include "LoaderInputs.h"
++#include "PayloadDisk.h"
+ 
+ #define WINDOW_SIZE  SIZE_256MB
+ #define BLOCK_SIZE   SIZE_2MB
+@@ -717,20 +720,18 @@ STATIC CONST EFI_GUID mEntryArgumentHobGuid = {
+ 
+ // Where the loader's inputs lie (LoaderInputs.h). The initrd is the caller's buffer. The payload RAM disk is
+ // the range the first-stage loader's device tree names, rounded up to whole sectors as the firmware's block
+-// device publishes it; it counts as verified when the boot volume's block device has exactly that size and
+-// reads its first and last sector from that memory, which is touched only once the size matches.
++// device publishes it. A relative-offset FAT child resolves to the complete raw parent; both devices must
++// match the corresponding initrd bytes before the full range counts as verified.
+ STATIC
+ VOID
+ LocateInputs (CONST UNIXNU_LOADER_BOOT_REQUEST *Request, DARWIN_LOADER_INPUT *Inputs)
+ {
+-  EFI_BLOCK_IO_PROTOCOL  *BlockIo;
+   VOID                   *Hob;
+   UINTN                  HobSize;
+   UINT64                 Tree;
+   UINT64                 Start;
+   UINT64                 End;
+   UINT64                 Size;
+-  UINT8                  Sector[512];
+ 
+   ZeroMem (Inputs, DARWIN_INPUT_COUNT * sizeof (*Inputs));
+   if ((Request->Ramdisk != NULL) && (Request->RamdiskSize != 0)) {
+@@ -749,13 +750,7 @@ LocateInputs (CONST UNIXNU_LOADER_BOOT_REQUEST *Request, DARWIN_LOADER_INPUT *In
+   Inputs[DARWIN_INPUT_PAYLOAD_DISK].Base = Start;
+   Inputs[DARWIN_INPUT_PAYLOAD_DISK].Size = Size;
+   Inputs[DARWIN_INPUT_PAYLOAD_DISK].State = DARWIN_INPUT_LOCATED;
+-  if (EFI_ERROR (gBS->HandleProtocol (Request->Volume, &gEfiBlockIoProtocolGuid, (VOID **)&BlockIo)) ||
+-      (BlockIo->Media == NULL) || BlockIo->Media->LogicalPartition || !BlockIo->Media->MediaPresent ||
+-      (BlockIo->Media->BlockSize != sizeof (Sector)) || (BlockIo->Media->LastBlock != Size / sizeof (Sector) - 1)) { return; }
+-  if (EFI_ERROR (BlockIo->ReadBlocks (BlockIo, BlockIo->Media->MediaId, 0, sizeof (Sector), Sector)) ||
+-      (CompareMem (Sector, (CONST VOID *)(UINTN)Start, sizeof (Sector)) != 0) ||
+-      EFI_ERROR (BlockIo->ReadBlocks (BlockIo, BlockIo->Media->MediaId, BlockIo->Media->LastBlock, sizeof (Sector), Sector)) ||
+-      (CompareMem (Sector, (CONST VOID *)(UINTN)(Start + Size - sizeof (Sector)), sizeof (Sector)) != 0)) { return; }
++  if (!DarwinVerifyPayloadDisk (Request->Volume, Start, End - Start)) { return; }
+   Inputs[DARWIN_INPUT_PAYLOAD_DISK].State |= DARWIN_INPUT_VERIFIED;
+ }
+ 
+diff --git a/DarwinBootPkg/Driver/DarwinBoot.inf b/DarwinBootPkg/Driver/DarwinBoot.inf
+index 3a199d4..6c36e5b 100644
+--- a/DarwinBootPkg/Driver/DarwinBoot.inf
++++ b/DarwinBootPkg/Driver/DarwinBoot.inf
+@@ -12,6 +12,7 @@
+   PackedRamdisk.h
+   MemoryWindow.h
+   LoaderInputs.h
++  PayloadDisk.h
+   BootArgs.h
+   BootVideo.h
+   DiagFont.h
+@@ -25,6 +26,7 @@
+   BaseLib
+   BaseMemoryLib
+   DebugLib
++  DevicePathLib
+   MemoryAllocationLib
+   PrintLib
+   UefiBootServicesTableLib
+@@ -37,6 +39,7 @@
+   gEfiLoadedImageProtocolGuid ## CONSUMES
+   gEfiGraphicsOutputProtocolGuid ## CONSUMES
+   gEfiBlockIoProtocolGuid ## SOMETIMES_CONSUMES
++  gEfiDevicePathProtocolGuid ## SOMETIMES_CONSUMES
+ 
+ [Guids]
+   gEfiFileInfoGuid
+diff --git a/README.md b/README.md
+index 3b3a91b..9649933 100644
+--- a/README.md
++++ b/README.md
+@@ -30,7 +30,7 @@ tables map at most 6 GiB, which bounds the window. The excluded-range hand-off h
+ With `/chosen/darwinboot-loader-inputs`, two empty 32-byte records, the loader records where its own inputs lie
+ in the firmware's memory map: the payload RAM disk, which is the range the first-stage boot loader's device tree
+ names as the initrd (found through the entry argument HOB of the firmware's SEC phase, and verified when the boot
+-volume's block device has that size and reads its first and last sector from it), and the boot entry's initrd
++volume's raw block device has that size and reads its first and last sector from it), and the boot entry's initrd
+ buffer. A record holds base, size, UEFI memory type (-1: none or mixed), state bits (1 located, 2 verified,
+ 4 inside the window, 8 usable) and usable bytes; the loader prints both as `DARWINBOOT: payload disk` and
+ `DARWINBOOT: initrd buffer`. Both inputs are read for the last time before `ExitBootServices` and XNU is told
+@@ -39,10 +39,18 @@ count as usable memory when boot services data, reserved memory or a usable type
+ unverified ranges stay excluded. Without the property the loader does not look for its inputs. Not run on
+ hardware.
+ 
++For a FAT boot volume published as a media relative-offset child, input
++verification resolves the raw parent through its device path, checks the child
++byte range against the original initrd, and compares both devices' boundary
++sectors with RAM. This preserves full input-memory accounting when Android
++prepends an unaligned vendor ramdisk. Elish has verified FAT discovery and EBS;
++its loader-input record and XNU execution are separate bring-up checks.
++
+ Host checks: `Test/test-memory-window.py` (window selection and the table on synthetic memory maps),
+ `Test/test-loader-inputs.py` (the HOB and device tree readers, the input records and their release into the
+ table), `Test/test-adt-window.py` (the device tree properties), `Test/test-kernel-parser.py`,
+-`Test/test-packed-ramdisk.py` and `Test/window-size.c`.
++`Test/test-packed-ramdisk.py`, `Test/test-payload-disk.py` (raw/relative-offset
++disk identity and bounds) and `Test/window-size.c`.
+ 
+ Build and interface details: [documentation](https://unixnu.com/reference/components).
+ Sources and dependencies: [catalog](https://unixnu.com/reference/components).
+diff --git a/Test/test-loader-inputs.py b/Test/test-loader-inputs.py
+index dda7168..c3cc95b 100644
+--- a/Test/test-loader-inputs.py
++++ b/Test/test-loader-inputs.py
+@@ -126,10 +126,10 @@ typedef size_t UINTN; typedef int BOOLEAN; typedef char CHAR8;
+ enum { EfiReservedMemoryType, EfiLoaderCode, EfiLoaderData, EfiBootServicesCode, EfiBootServicesData,
+        EfiRuntimeServicesCode, EfiRuntimeServicesData, EfiConventionalMemory };
+ typedef struct { UINT32 Type; UINT64 PhysicalStart; UINT64 VirtualStart; UINT64 NumberOfPages; UINT64 Attribute; } EFI_MEMORY_DESCRIPTOR;
+-static UINT16 ReadUnaligned16(const UINT16 *p) { UINT16 v; memcpy(&v, p, 2); return v; }
+-static UINT64 ReadUnaligned64(const UINT64 *p) { UINT64 v; memcpy(&v, p, 8); return v; }
+-static void WriteUnaligned32(UINT32 *p, UINT32 v) { memcpy(p, &v, 4); }
+-static void WriteUnaligned64(UINT64 *p, UINT64 v) { memcpy(p, &v, 8); }
++static UINT16 ReadUnaligned16(const VOID *p) { UINT16 v; memcpy(&v, p, 2); return v; }
++static UINT64 ReadUnaligned64(const VOID *p) { UINT64 v; memcpy(&v, p, 8); return v; }
++static void WriteUnaligned32(VOID *p, UINT32 v) { memcpy(p, &v, 4); }
++static void WriteUnaligned64(VOID *p, UINT64 v) { memcpy(p, &v, 8); }
+ #include "LoaderInputs.h"
+ int hob_value(const UINT8 *hob, size_t limit, const UINT8 *guid, UINT64 *value) { return DarwinHobValue(hob, limit, guid, value); }
+ size_t hob_size(const UINT8 *hob, UINT64 address, UINT64 limit) { return DarwinHobListSize(hob, address, limit); }
+diff --git a/DarwinBootPkg/Driver/PayloadDisk.h b/DarwinBootPkg/Driver/PayloadDisk.h
+new file mode 100644
+--- /dev/null
++++ b/DarwinBootPkg/Driver/PayloadDisk.h
+@@ -0,0 +1,78 @@
++// SPDX-License-Identifier: BSD-2-Clause-Patent
++// Verify the full FDT initrd even when the boot volume is an unaligned FAT
++// suffix published as a relative-offset child of that raw block device.
++STATIC
++BOOLEAN
++DarwinVerifyPayloadDisk (EFI_HANDLE Volume, UINT64 Start, UINT64 Bytes)
++{
++  EFI_BLOCK_IO_PROTOCOL                   *Disk;
++  EFI_BLOCK_IO_PROTOCOL                   *Child;
++  EFI_DEVICE_PATH_PROTOCOL                *Path;
++  EFI_DEVICE_PATH_PROTOCOL                *ParentPath;
++  EFI_DEVICE_PATH_PROTOCOL                *Node;
++  EFI_DEVICE_PATH_PROTOCOL                *Remaining;
++  MEDIA_RELATIVE_OFFSET_RANGE_DEVICE_PATH *Range;
++  EFI_HANDLE                              Parent;
++  UINT64                                  Size;
++  UINT64                                  Offset;
++  UINT64                                  ChildBytes;
++  UINT8                                   Sector[512];
++  EFI_STATUS                              Status;
++
++  if ((Bytes < sizeof (Sector)) || (Bytes > MAX_UINT64 - 511)) { return FALSE; }
++  Size = ALIGN_VALUE (Bytes, 512);
++  if (Size > MAX_UINT64 - Start) { return FALSE; }
++  if (EFI_ERROR (gBS->HandleProtocol (Volume, &gEfiBlockIoProtocolGuid, (VOID **)&Disk)) ||
++      (Disk->Media == NULL)) { return FALSE; }
++
++  if (Disk->Media->LogicalPartition) {
++    Child = Disk;
++    if (!Child->Media->MediaPresent || Child->Media->BlockSize != sizeof (Sector) ||
++        Child->Media->LastBlock >= MAX_UINT64 / sizeof (Sector) ||
++        EFI_ERROR (gBS->HandleProtocol (Volume, &gEfiDevicePathProtocolGuid, (VOID **)&Path))) { return FALSE; }
++    ParentPath = DuplicateDevicePath (Path);
++    if (ParentPath == NULL) { return FALSE; }
++    Node = ParentPath;
++    while (!IsDevicePathEnd (Node) && !IsDevicePathEnd (NextDevicePathNode (Node))) {
++      Node = NextDevicePathNode (Node);
++    }
++    if ((DevicePathType (Node) != MEDIA_DEVICE_PATH) ||
++        (DevicePathSubType (Node) != MEDIA_RELATIVE_OFFSET_RANGE_DP) ||
++        (DevicePathNodeLength (Node) != sizeof (*Range))) {
++      FreePool (ParentPath);
++      return FALSE;
++    }
++    Range = (MEDIA_RELATIVE_OFFSET_RANGE_DEVICE_PATH *)Node;
++    Offset = ReadUnaligned64 (&Range->StartingOffset);
++    ChildBytes = (Child->Media->LastBlock + 1) * sizeof (Sector);
++    if ((Range->Reserved != 0) || (Offset >= Bytes) || (ChildBytes > Bytes - Offset) ||
++        (ReadUnaligned64 (&Range->EndingOffset) != Offset + ChildBytes - 1)) {
++      FreePool (ParentPath);
++      return FALSE;
++    }
++    SetDevicePathEndNode (Node);
++    Remaining = ParentPath;
++    Status = gBS->LocateDevicePath (&gEfiBlockIoProtocolGuid, &Remaining, &Parent);
++    if (EFI_ERROR (Status) || !IsDevicePathEnd (Remaining) || Parent == Volume) {
++      FreePool (ParentPath);
++      return FALSE;
++    }
++    Status = gBS->HandleProtocol (Parent, &gEfiBlockIoProtocolGuid, (VOID **)&Disk);
++    FreePool (ParentPath);
++    if (EFI_ERROR (Status)) { return FALSE; }
++
++    if (EFI_ERROR (Child->ReadBlocks (Child, Child->Media->MediaId, 0, sizeof (Sector), Sector)) ||
++        (CompareMem (Sector, (CONST VOID *)(UINTN)(Start + Offset), sizeof (Sector)) != 0) ||
++        EFI_ERROR (Child->ReadBlocks (Child, Child->Media->MediaId, Child->Media->LastBlock, sizeof (Sector), Sector)) ||
++        (CompareMem (Sector, (CONST VOID *)(UINTN)(Start + Offset + ChildBytes - sizeof (Sector)), sizeof (Sector)) != 0)) {
++      return FALSE;
++    }
++  }
++
++  return (Disk->Media != NULL) && !Disk->Media->LogicalPartition && Disk->Media->MediaPresent &&
++         (Disk->Media->BlockSize == sizeof (Sector)) && (Disk->Media->LastBlock == Size / sizeof (Sector) - 1) &&
++         !EFI_ERROR (Disk->ReadBlocks (Disk, Disk->Media->MediaId, 0, sizeof (Sector), Sector)) &&
++         (CompareMem (Sector, (CONST VOID *)(UINTN)Start, sizeof (Sector)) == 0) &&
++         !EFI_ERROR (Disk->ReadBlocks (Disk, Disk->Media->MediaId, Disk->Media->LastBlock, sizeof (Sector), Sector)) &&
++         (CompareMem (Sector, (CONST VOID *)(UINTN)(Start + Size - sizeof (Sector)), sizeof (Sector)) == 0);
++}
+diff --git a/Test/test-payload-disk.py b/Test/test-payload-disk.py
+new file mode 100644
+--- /dev/null
++++ b/Test/test-payload-disk.py
+@@ -0,0 +1,107 @@
++#!/usr/bin/env python3
++"""Verify raw/relative-offset initrd disks and reject unrelated or corrupt volumes."""
++from pathlib import Path
++import subprocess
++import tempfile
++
++driver = Path(__file__).resolve().parents[1] / 'DarwinBootPkg/Driver'
++with tempfile.TemporaryDirectory(prefix='darwinboot-payload-disk-') as temporary:
++    work = Path(temporary)
++    (work / 'test.c').write_text(r'''
++#include <assert.h>
++#include <stdint.h>
++#include <stdlib.h>
++#include <string.h>
++typedef uint8_t UINT8; typedef uint16_t UINT16; typedef uint32_t UINT32; typedef uint64_t UINT64;
++typedef size_t UINTN; typedef int BOOLEAN; typedef void VOID; typedef void *EFI_HANDLE; typedef int EFI_STATUS;
++#define STATIC static
++#define CONST const
++#define TRUE 1
++#define FALSE 0
++#define MAX_UINT64 UINT64_MAX
++#define ALIGN_VALUE(n,a) (((n)+(a)-1)&~((UINT64)(a)-1))
++#define EFI_ERROR(n) ((n)!=0)
++#define CompareMem memcmp
++#define FreePool free
++#define MEDIA_DEVICE_PATH 4
++#define MEDIA_RELATIVE_OFFSET_RANGE_DP 8
++#pragma pack(push,1)
++typedef struct { UINT8 Type, SubType; UINT16 Length; } EFI_DEVICE_PATH_PROTOCOL;
++typedef struct { EFI_DEVICE_PATH_PROTOCOL Header; UINT32 Reserved; UINT64 StartingOffset, EndingOffset; } MEDIA_RELATIVE_OFFSET_RANGE_DEVICE_PATH;
++typedef struct { EFI_DEVICE_PATH_PROTOCOL Vendor; UINT8 Guid[16]; MEDIA_RELATIVE_OFFSET_RANGE_DEVICE_PATH Range; EFI_DEVICE_PATH_PROTOCOL End; } CHILD_PATH;
++#pragma pack(pop)
++typedef struct { UINT32 MediaId; BOOLEAN LogicalPartition, MediaPresent; UINT32 BlockSize; UINT64 LastBlock; } MEDIA;
++typedef struct BLOCK BLOCK;
++struct BLOCK { MEDIA *Media; EFI_STATUS (*ReadBlocks)(BLOCK *,UINT32,UINT64,UINTN,VOID *); };
++typedef BLOCK EFI_BLOCK_IO_PROTOCOL;
++static int gEfiBlockIoProtocolGuid, gEfiDevicePathProtocolGuid;
++static UINT8 Memory[8192];
++static UINT64 Offset=187;
++static MEDIA RawMedia={1,0,1,512,15}, ChildMedia={1,1,1,512,7};
++static BLOCK Raw, Child;
++static CHILD_PATH Path;
++static int BadRead, Corrupt, MissingParent;
++#define RAW ((EFI_HANDLE)(uintptr_t)1)
++#define CHILD ((EFI_HANDLE)(uintptr_t)2)
++static UINT64 ReadUnaligned64(const VOID *p) { UINT64 v; memcpy(&v,p,8); return v; }
++static BOOLEAN IsDevicePathEnd(const EFI_DEVICE_PATH_PROTOCOL *p) { return p->Type==0x7f; }
++static EFI_DEVICE_PATH_PROTOCOL *NextDevicePathNode(EFI_DEVICE_PATH_PROTOCOL *p) { return (VOID *)((UINT8 *)p+p->Length); }
++static int DevicePathType(const EFI_DEVICE_PATH_PROTOCOL *p) { return p->Type; }
++static int DevicePathSubType(const EFI_DEVICE_PATH_PROTOCOL *p) { return p->SubType; }
++static int DevicePathNodeLength(const EFI_DEVICE_PATH_PROTOCOL *p) { return p->Length; }
++static VOID SetDevicePathEndNode(EFI_DEVICE_PATH_PROTOCOL *p) { *p=(EFI_DEVICE_PATH_PROTOCOL){0x7f,0xff,4}; }
++static EFI_DEVICE_PATH_PROTOCOL *DuplicateDevicePath(EFI_DEVICE_PATH_PROTOCOL *p) {
++  CHILD_PATH *copy=malloc(sizeof(*copy)); memcpy(copy,p,sizeof(*copy)); return (VOID *)copy;
++}
++static EFI_STATUS Read(BLOCK *b,UINT32 id,UINT64 lba,UINTN bytes,VOID *dest) {
++  if(BadRead || id!=b->Media->MediaId || bytes!=512 || lba>b->Media->LastBlock) return 1;
++  memcpy(dest,Memory+(b==&Child?Offset:0)+lba*512,bytes);
++  if(Corrupt==(b==&Child?2:1)) ((UINT8 *)dest)[0]^=1;
++  return 0;
++}
++static EFI_STATUS Handle(EFI_HANDLE h,VOID *guid,VOID **out) {
++  if(guid==&gEfiBlockIoProtocolGuid && (h==RAW || h==CHILD)) { *out=h==RAW?(VOID *)&Raw:(VOID *)&Child; return 0; }
++  if(guid==&gEfiDevicePathProtocolGuid && h==CHILD) { *out=&Path; return 0; }
++  return 1;
++}
++static EFI_STATUS Locate(VOID *guid,EFI_DEVICE_PATH_PROTOCOL **p,EFI_HANDLE *h) {
++  if(MissingParent || guid!=&gEfiBlockIoProtocolGuid || memcmp(*p,&Path,20)) return 1;
++  *p=NextDevicePathNode(*p); if(!IsDevicePathEnd(*p)) return 1;
++  *h=RAW; return 0;
++}
++static struct { EFI_STATUS (*HandleProtocol)(EFI_HANDLE,VOID *,VOID **); EFI_STATUS (*LocateDevicePath)(VOID *,EFI_DEVICE_PATH_PROTOCOL **,EFI_HANDLE *); } Services={Handle,Locate}, *gBS=&Services;
++#include "PayloadDisk.h"
++int main(void) {
++  for(size_t i=0;i<sizeof(Memory);i++) Memory[i]=(UINT8)(i*7+i/512);
++  Raw=(BLOCK){&RawMedia,Read}; Child=(BLOCK){&ChildMedia,Read};
++  Path.Vendor=(EFI_DEVICE_PATH_PROTOCOL){1,4,20};
++  Path.Range.Header=(EFI_DEVICE_PATH_PROTOCOL){4,8,24};
++  Path.Range.StartingOffset=Offset; Path.Range.EndingOffset=Offset+4096-1;
++  SetDevicePathEndNode(&Path.End);
++  UINT64 start=(UINT64)(uintptr_t)Memory;
++  assert(DarwinVerifyPayloadDisk(RAW,start,sizeof(Memory)));
++  assert(DarwinVerifyPayloadDisk(CHILD,start,sizeof(Memory)));
++  assert(DarwinVerifyPayloadDisk(CHILD,start,sizeof(Memory)-3)); // rounded raw disk, exact child bounds
++  assert(!DarwinVerifyPayloadDisk(CHILD,start,UINT64_MAX));
++  assert(!DarwinVerifyPayloadDisk(CHILD,UINT64_MAX-100,8192));
++  assert(!DarwinVerifyPayloadDisk(CHILD,start,1));
++  for(int n=1;n<=2;n++) { Corrupt=n; assert(!DarwinVerifyPayloadDisk(CHILD,start,8192)); } Corrupt=0;
++  BadRead=1; assert(!DarwinVerifyPayloadDisk(CHILD,start,8192)); BadRead=0;
++  MissingParent=1; assert(!DarwinVerifyPayloadDisk(CHILD,start,8192)); MissingParent=0;
++  RawMedia.LastBlock--; assert(!DarwinVerifyPayloadDisk(CHILD,start,8192)); RawMedia.LastBlock++;
++  RawMedia.LogicalPartition=1; assert(!DarwinVerifyPayloadDisk(CHILD,start,8192)); RawMedia.LogicalPartition=0;
++  RawMedia.MediaPresent=0; assert(!DarwinVerifyPayloadDisk(CHILD,start,8192)); RawMedia.MediaPresent=1;
++  ChildMedia.LastBlock=UINT64_MAX; assert(!DarwinVerifyPayloadDisk(CHILD,start,8192)); ChildMedia.LastBlock=7;
++  ChildMedia.BlockSize=4096; assert(!DarwinVerifyPayloadDisk(CHILD,start,8192)); ChildMedia.BlockSize=512;
++  Path.Range.StartingOffset=8192; assert(!DarwinVerifyPayloadDisk(CHILD,start,8192)); Path.Range.StartingOffset=Offset;
++  Path.Range.EndingOffset++; assert(!DarwinVerifyPayloadDisk(CHILD,start,8192)); Path.Range.EndingOffset--;
++  Path.Range.Reserved=1; assert(!DarwinVerifyPayloadDisk(CHILD,start,8192)); Path.Range.Reserved=0;
++  Path.Range.Header.SubType=1; assert(!DarwinVerifyPayloadDisk(CHILD,start,8192)); Path.Range.Header.SubType=8;
++  return 0;
++}
++''')
++    binary = work / 'test'
++    subprocess.run(['clang', '-Wall', '-Wextra', '-Werror', '-fsanitize=address,undefined',
++                    '-fno-sanitize-recover=all', '-I', str(driver), str(work / 'test.c'), '-o', str(binary)], check=True)
++    subprocess.run([str(binary)], check=True)
++print('Payload disk: raw/child identity, unaligned bounds, corrupt reads and missing parents passed')

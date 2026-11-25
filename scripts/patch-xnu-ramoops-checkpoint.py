@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Patch a kernel COPY to record an elish MMU-off checkpoint and warm-reset.
+"""Patch a kernel copy to record an elish MMU checkpoint and warm-reset.
 
 The elish firmware must first prepare PON warm reset and the Android ramoops
 console. This is a terminal diagnostic, not a kernel intended to run iPadOS.
@@ -18,7 +18,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('kernel', type=Path, help='unmodified COPY of the prelinked kernel')
     parser.add_argument('--unixnu', type=Path, default=Path(__file__).resolve().parents[2] / 'UniXNU')
-    parser.add_argument('--stage', choices=['entry', 'before-mmu'], default='before-mmu')
+    parser.add_argument('--stage', choices=['entry', 'before-mmu', 'after-mmu'], default='before-mmu')
     args = parser.parse_args()
     helper = args.unixnu / 'scripts/patch-xnu-entry-probe.py'
     sys.path.insert(0, str(helper.parent))
@@ -29,18 +29,51 @@ def main():
     before = hashlib.sha256(data).hexdigest()
     probe.load_segments(data)
     probe.rebase(args.kernel, data)
-    site = probe.ENTRY_VA if args.stage == 'entry' else probe.MMU_ENABLE_VA
-    expected = probe.branch(probe.ENTRY_VA, probe.START_FIRST_CPU) if args.stage == 'entry' else 0xD5181000
-    if struct.unpack_from('<I', data, probe.file_offset(site))[0] != expected:
-        raise SystemExit('Checkpoint instruction does not match the unmodified kernel')
-    cave = probe.ENTRY_VA + 4
-    text = f'ELISH_XNU_CHECKPOINT: {args.stage}; SCTLR.M=0; terminal probe reset\n'
+    after_mmu = args.stage == 'after-mmu'
+    entry_branch = probe.branch(probe.ENTRY_VA, probe.START_FIRST_CPU)
+    site, expected = {
+        'entry': (probe.ENTRY_VA, entry_branch),
+        'before-mmu': (probe.MMU_ENABLE_VA, 0xD5181000),
+        'after-mmu': (probe.AFTER_MMU_VA, 0xD2A00600),
+    }[args.stage]
+    patches = [(site, expected, probe.CAVES[3] if after_mmu else probe.ENTRY_VA + 4)]
+    if after_mmu:
+        patches[:0] = [(probe.ENTRY_VA, entry_branch, probe.CAVES[1]),
+                       (probe.MMU_ENABLE_VA, 0xD5181000, probe.CAVES[2])]
+    for address, instruction, _ in patches:
+        if struct.unpack_from('<I', data, probe.file_offset(address))[0] != instruction:
+            raise SystemExit(f'Checkpoint instruction at {address:#x} does not match the unmodified kernel')
+    sctlr = '1' if after_mmu else '0'
+    text = f'ELISH_XNU_CHECKPOINT: {args.stage}; SCTLR.M={sctlr}; terminal probe reset\n'
+    setup = hold = ''
+    if after_mmu:
+        # The trampoline executes from the bootstrap identity map. Verify M
+        # before clearing it so neither the framebuffer nor ramoops needs a VA.
+        setup = '''  mrs x10, sctlr_el1
+  tbz x10, #0, reset
+  dsb sy
+  bic x10, x10, #1
+  bic x10, x10, #4
+  bic x10, x10, #0x1000
+  msr sctlr_el1, x10
+  isb
+''' + probe.PAINT.format(args='x20', band=3, lo='0xffff', hi='0xff00')
+        hold = '''  mrs x1, cntpct_el0
+  mrs x2, cntfrq_el0
+  mov x3, #8
+  madd x2, x2, x3, x1
+3:
+  isb
+  mrs x1, cntpct_el0
+  cmp x1, x2
+  b.lo 3b
+'''
     # No stack, firmware call or virtual address is used. Preserve the existing
     # 2 MiB console's header and append only when its ring geometry is valid.
     source = f'''.text
 .global _start
 _start:
-  movz x3, #0xb000, lsl #16
+{setup}  movz x3, #0xb000, lsl #16
   ldr w4, [x3]
   movz w5, #0x4244
   movk w5, #0x4347, lsl #16
@@ -77,7 +110,7 @@ _start:
   dc cvac, x3
   dsb sy
 reset:
-  ldr x3, =0x146bf65c
+{hold}  ldr x3, =0x146bf65c
   ldr w4, =0x77665500
   str w4, [x3]
   dsb sy
@@ -95,13 +128,19 @@ message:
   .ascii {json.dumps(text)}
 .ltorg
 '''
+    sources = [(source, {}, 0x400)]
+    if after_mmu:
+        sources[:0] = [(probe.SOURCES[1], {'target': probe.START_FIRST_CPU}, probe.CAVE_SIZE),
+                       (probe.SOURCES[2], {'target': probe.MMU_ENABLE_VA + 4}, probe.CAVE_SIZE)]
     with tempfile.TemporaryDirectory(prefix='elish-xnu-checkpoint-') as temporary:
-        code = probe.assemble(source, cave, {}, Path(temporary))
-    at = probe.file_offset(cave)
-    if len(code) > 0x400 or len(data[at:at + len(code)]) != len(code) or any(data[at:at + len(code)]):
-        raise SystemExit('Checkpoint does not fit the verified empty entry padding')
-    data[at:at + len(code)] = code
-    struct.pack_into('<I', data, probe.file_offset(site), probe.branch(site, cave))
+        for (address, _, cave), (assembly, symbols, limit) in zip(patches, sources, strict=True):
+            code = probe.assemble(assembly, cave, symbols, Path(temporary))
+            at = probe.file_offset(cave)
+            if (len(code) > limit or probe.file_offset(cave + len(code) - 1) != at + len(code) - 1
+                    or len(data[at:at + len(code)]) != len(code) or any(data[at:at + len(code)])):
+                raise SystemExit(f'Checkpoint at {cave:#x} does not fit the verified empty entry padding')
+            data[at:at + len(code)] = code
+            struct.pack_into('<I', data, probe.file_offset(address), probe.branch(address, cave))
     args.kernel.write_bytes(data)
     manifest = {'kernel': str(args.kernel.resolve()), 'stage': args.stage, 'site': hex(site),
                 'cave': hex(cave), 'code_bytes': len(code), 'before_sha256': before,

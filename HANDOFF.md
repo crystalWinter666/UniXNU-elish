@@ -1,5 +1,18 @@
 # UniXNU elish UEFI 移植交接
 
+## 最新交接 · run28
+
+- run24 用户看到绿、蓝、粉三条彩条，随后回到 fastboot。58 秒录像的最后一帧仍是彩条，复位原因未确定。
+- run25/26 的 20.19/24.19 秒 USB 断开时长与 7/11 秒复位探针吻合，支持有恢复卷时 `_arm_vm_init()` 已返回。run27 将终止探针移到 `IOSecureBSDRoot()` 返回点，实机 23.23 秒后回到 fastboot，支持 `vfs_mountroot()` 已成功。命令、镜像、哈希和证据见 [恢复启动记录](reports/elish-restore-root-20261125.md)。
+- run28 的实机录像出现绿、蓝、粉、青四条彩条。`scripts/patch-xnu-launchd-checkpoint.py` 在 PID 1 首次成功写入 `kern.initproc_spawned=1` 后绘制第四条并继续执行，确认 21H461 恢复环境中的 Apple `launchd` 到达 `main()`。镜像为 `/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run28-restore-launchd-cyan/boot.img`，SHA-256 `7e4b05e374c381aefaef41eaa355490d74b3980159adda8b7f01b52a75ab1c13`。本轮只用 `fastboot boot`。[实机画面](reports/elish-run28-launchd-20261125.jpg)
+- 完整 System 根卷、Setup 和持久 Data 尚待实测。全量根卷路径仍缺 elish UFS 控制器、PHY 和 DMA 交接验证。
+
+## 最新交接 · run21
+
+- 4 GiB RAM-only run21 到达 `IOFindBSDRoot`，在 `IOKitBSDInit.cpp:984` 报 `Failed to mount root device`。设备照片的四个栈帧与打包内核一致。MMU、`_arm_vm_init()` 和 BSD 初始化已实机确认，APFS 根挂载和 `launchd` 待验证。
+- 主机随后重新看到 `4bed07e4`，`getvar product` 返回 `elish`，`max-download-size` 返回 `805306368`。启动命令、镜像和照片哈希见 [run21 记录](reports/elish-run21-root-panic-20261125.md)。
+- 21H461 恢复卷 `9071148B-B025-402D-AD7A-48464D8B5FFF` 已从原 IPSW 提取和稀疏打包。下一镜像通过 RamBlock 发布该卷，使用配套恢复信任缓存，并以 `rd=md0-ramblock` 保留 UUID 匹配。后续验证完整 System 根卷需要 UFS 或其他可容纳 8.74 GiB 镜像的存储路径。
+
 ## 最新交接 · 2026-11-25 17:36 CST
 
 - 用户手动执行了 `fastboot -s 4bed07e4 boot /root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run12-postmmu-console/boot.img`，报告屏幕出现与此前照片近似的彩条。此命令是 RAM-only `fastboot boot`，不是 `fastboot flash`，不会持久写分区。用户没有提供这次照片，故作为口头观察记录；按描述至多对应 run09 已见的 XNU pre-MMU 彩条，不能确认 run12 的 post-MMU 文字或 `_arm_vm_init()` 返回。

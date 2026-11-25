@@ -2,7 +2,7 @@
 
 An experimental iPadOS 17.7.11 (`21H461`) port for `elish` (`M2105K81AC`, Snapdragon 870). This repository provides the board configuration, device tree, XNU patches and image packaging. [UEFI firmware source](https://github.com/crystalWinter666/uefi-elish)
 
-RAM-only tests confirm FAT payload discovery, DarwinBoot, the 256 MiB window and successful `ExitBootServices()`. A run09 close photo confirms XNU entry through the pre-MMU checkpoint; its six-second stage-3 reset and USB timeline meet UniXNU's diagnostic criterion for MMU enable, while `_arm_vm_init()` return remains unconfirmed. Run19's only valid apps-SMMU mapping belongs to MDSS SDE, not UFS. The kernel remains `loadable=false`; UFS access, device-side APFS mount and iPadOS userspace have not been verified. A same-SoC alioth port reaches UFS root and launchd, but its board streams and clocks do not establish elish hardware support. [XNU entry evidence](reports/elish-xnu-entry-visual-retest-20261125.md) · [SMMU probe](reports/elish-smmu-readonly-probe-20261125.md) · [UFS evidence and reference audit](reports/elish-ufs-reference-audit-20261125.md)
+On elish, the RAM-only run28 image boots the 21H461 Apple Restore APFS volume through RamBlock. The fourth framebuffer band confirms that Apple `launchd` reached `main()` as PID 1. Full System-root boot, Setup and persistent Data remain unverified. [Run28 evidence](reports/elish-restore-root-20261125.md) · [UFS handoff audit](reports/elish-ufs-reference-audit-20261125.md)
 
 ## Build
 

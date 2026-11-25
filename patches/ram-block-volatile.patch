@@ -1,0 +1,299 @@
+diff --git a/NativeRamBlock.cpp b/NativeRamBlock.cpp
+index 070c60b..c810b23 100644
+--- a/NativeRamBlock.cpp
++++ b/NativeRamBlock.cpp
+@@ -18,14 +18,18 @@
+ #include <kern/thread_call.h>
+ #include <pexpert/pexpert.h>
+ #include "SparseDisk.h"
++#ifndef RAM_BLOCK_VOLATILE_ONLY
+ #include "PersistOverlay.h"
+ #include "DirectDisk.h"
++#endif
+ 
+ extern "C" {
+ extern unsigned long gPhysBase, gPhysSize;
++#ifndef RAM_BLOCK_VOLATILE_ONLY
+ // The kernel's release of loader memory (payload-addon-release.patch); absent in a kernel without it.
+ bool ml_static_mfree_prepare(vm_offset_t, vm_size_t) __attribute__((weak_import));
+ void IODTFreeLoaderInfo(const char *, void *, int);
++#endif
+ int native_ram_block_volume_device(const char *, dev_t *, char *, size_t);
+ volatile uint32_t native_ram_block_ready = 0;
+ volatile uint64_t native_ram_block_bytes = 0;
+@@ -36,6 +40,7 @@ volatile uint64_t native_ram_block_resident_bytes = 0;
+ volatile uint32_t native_ram_block_sparse = 0;
+ volatile uint32_t native_ram_block_seed_released = 0;   // pages of the loader's packed seed returned to the VM
+ uint8_t native_ram_block_seed_sha256[32];
++#ifndef RAM_BLOCK_VOLATILE_ONLY
+ // Optional persistence of the changed pages through a board-provided store window (see PersistOverlay.h). All weak: a build
+ // without the provider keeps the volatile disk.
+ unsigned native_ufs_store_mode(void) __attribute__((weak_import));
+@@ -46,6 +51,7 @@ int native_ufs_store_write(uint64_t, uint32_t, const void *) __attribute__((weak
+ int native_ufs_store_write_cached(uint64_t, uint32_t, const void *) __attribute__((weak_import));
+ int native_ufs_store_sync(void) __attribute__((weak_import));
+ unsigned native_ufs_store_gpt_check(void) __attribute__((weak_import));
++#endif
+ // Diagnostics. state: 0 off, 1 blank (read-only probe), 2 resumed, 3 fresh (Install and boot), 4 refused/failed, 5 degraded after an I/O
+ // error, 6 resumed read-only (probe), 7 kept: the store holds no Data of this seed and no reset was asked, so it is left untouched and
+ // this boot's Data runs from the seed alone (header: why). header: persist::checkHeader result.
+@@ -71,11 +77,14 @@ class NativeRamBlock : public IOBlockStorageDevice {
+   uint64_t capacity = 0;
+   bool online = false;
+   RamSparseDisk sparse = {};
++#ifndef RAM_BLOCK_VOLATILE_ONLY
+   // A disk above 2 GiB keeps only the nonzero pages of its seed (SeedDisk.h), in memory proportional to the content, and is served by the
+   // direct (store-backed) path alone: it needs the persistent store open read-write, or its requests fail.
+   SeedDisk big = {};
+   bool isBig = false;
++#endif
+   uint8_t seedHash[32] = {};
++#ifndef RAM_BLOCK_VOLATILE_ONLY
+   persist::Overlay overlay;
+   uint8_t *overlayBits = nullptr, *stage = nullptr;   // stage: kStagePages pages, one write or read run
+   static constexpr uint32_t kStagePages = 32;
+@@ -203,7 +212,9 @@ class NativeRamBlock : public IOBlockStorageDevice {
+   };
+   IOReturn directReadWrite(IOMemoryDescriptor *buffer, uint64_t offset, uint64_t bytes, uint64_t *actual, uint64_t *waited);
+   void persistFailed() { overlay.active = false; native_data_persist_state = 5; __atomic_fetch_add(&native_data_persist_errors, 1, __ATOMIC_RELAXED); }
++#endif
+ public:
++#ifndef RAM_BLOCK_VOLATILE_ONLY
+   // Called once, before the Data volume is mounted (native_ram_block_volume_seed): open the store window, put the pages that
+   // earlier boots changed back into the sparse disk, and from then on write changed pages through. The seed identity
+   // (seedHash) is not affected. Any refusal or error leaves the disk volatile, exactly as without persistence.
+@@ -310,12 +321,18 @@ public:
+     }
+     IOLockUnlock(gate);
+   }
++#endif
+ 
+-  bool available() const { return online && (memory || sparse.pages || isBig) && capacity; }
++  bool available() const {
++#ifndef RAM_BLOCK_VOLATILE_ONLY
++    if (isBig) return online && capacity;
++#endif
++    return online && (memory || sparse.pages) && capacity;
++  }
+   bool seedInfo(uint64_t *base,uint64_t *bytes,uint8_t hash[32]) {
+     if(!gate || !base || !bytes || !hash)return false;
+     IOLockLock(gate);bool ready=available();
+-    if(ready){*base=(sparse.pages||isBig)?0:reinterpret_cast<uint64_t>(memory);*bytes=capacity*512;memcpy(hash,seedHash,32);}
++    if(ready){*base=reinterpret_cast<uint64_t>(memory);*bytes=capacity*512;memcpy(hash,seedHash,32);}
+     IOLockUnlock(gate);return ready;
+   }
+   bool start(IOService *) override;
+@@ -338,13 +355,24 @@ public:
+   IOReturn reportWriteProtection(bool *value) override { *value = false; return kIOReturnSuccess; }
+   IOReturn doSynchronizeCache() override {
+     if (!online) return kIOReturnNotReady;
++#ifndef RAM_BLOCK_VOLATILE_ONLY
+     // Write through: every changed page is on the medium, with its bitmap bit, before its write completed (PersistOverlay.h).
+     if (!writeBack) return kIOReturnSuccess;
+     // Write back: the pages written so far, then their bitmap blocks. Barrier and full requests are both served as a full flush.
+     return flushStore(false) ? kIOReturnSuccess : kIOReturnIOError;
++#else
++    return kIOReturnSuccess;
++#endif
+   }
+   IOReturn doSynchronize(UInt64, UInt64, IOOptionBits) override { return doSynchronizeCache(); }
+-  IOReturn getWriteCacheState(bool *value) override { *value = writeBack; return kIOReturnSuccess; }
++  IOReturn getWriteCacheState(bool *value) override {
++#ifdef RAM_BLOCK_VOLATILE_ONLY
++    *value = false;
++#else
++    *value = writeBack;
++#endif
++    return kIOReturnSuccess;
++  }
+   IOReturn setWriteCacheState(bool) override { return kIOReturnUnsupported; }
+   IOReturn doAsyncReadWrite(IOMemoryDescriptor *, UInt64, UInt64, IOStorageAttributes *, IOStorageCompletion *) override;
+ };
+@@ -370,12 +398,18 @@ bool NativeRamBlock::start(IOService *provider)
+   if (!bytes || bytes > 0x80000000 || (physical & 4095) || (!packedInput && (bytes & 4095)) ||
+       physical < gPhysBase || bytes > gPhysSize || physical - gPhysBase > gPhysSize - bytes) return false;
+   memory = reinterpret_cast<uint8_t *>(ml_static_ptovirt(physical));
+-  if (!memory || !(gate = IOLockAlloc()) || !(poolLock = IOLockAlloc()) || !(rangeLock = IOLockAlloc()) ||
++  if (!memory || !(gate = IOLockAlloc())) return false;
++#ifndef RAM_BLOCK_VOLATILE_ONLY
++  if (!(poolLock = IOLockAlloc()) || !(rangeLock = IOLockAlloc()) ||
+       !(bitLock = IOLockAlloc()) || !(flushMutex = IOLockAlloc()) || !(flushRw = IORWLockAlloc())) return false;
++#endif
+   uint64_t logical=bytes;
+   if(packedInput){
+     if(!ramPackedLayout(memory,bytes,&logical))return false;
+     struct ImportOps {uint8_t *allocate(){return static_cast<uint8_t *>(IOMallocZero(4096));}} ops;
++#ifdef RAM_BLOCK_VOLATILE_ONLY
++    if (logical > 0x80000000ULL) return false;
++#else
+     if(logical>0x80000000ULL){
+       uint64_t nonzero=0;
+       if(!seedCountNonzero(memory,bytes,&nonzero))return false;
+@@ -384,7 +418,9 @@ bool NativeRamBlock::start(IOService *provider)
+       big.page=static_cast<uint8_t **>(IOMallocZero((nonzero?nonzero:1)*sizeof(uint8_t *)));
+       if(!big.index||!big.page||!seedImportSparse(big,memory,bytes,ops))return false;
+       isBig=true;sparse.bytes=logical;
+-    }else{
++    } else
++#endif
++    {
+       sparse.bytes=logical;
+       sparse.pages=static_cast<uint8_t **>(IOMallocZero((logical/4096)*sizeof(uint8_t *)));
+       if(!ramSparseImport(sparse,memory,bytes,ops))return false;
+@@ -393,11 +429,14 @@ bool NativeRamBlock::start(IOService *provider)
+   capacity = logical / 512;
+   SHA256_CTX context;
+   SHA256_Init(&context);
++#ifndef RAM_BLOCK_VOLATILE_ONLY
+   if(isBig){
+     seedIdentity(big,context,[](SHA256_CTX &c){SHA256_Init(&c);},[](SHA256_CTX &c,const void *p,size_t n){SHA256_Update(&c,p,n);},
+                  [](SHA256_CTX &c,uint8_t *out){SHA256_Final(out,&c);},seedHash);
+     memory=nullptr;
+-  }else{
++  } else
++#endif
++  {
+   if(sparse.pages){
+     static const uint8_t zero[4096]={};
+     for(uint64_t i=0;i<logical/4096;++i)SHA256_Update(&context,sparse.pages[i]?sparse.pages[i]:zero,4096);
+@@ -405,6 +444,7 @@ bool NativeRamBlock::start(IOService *provider)
+   }else SHA256_Update(&context, memory, bytes);
+   SHA256_Final(seedHash, &context);
+   }
++#ifndef RAM_BLOCK_VOLATILE_ONLY
+   // A packed seed was copied page by page into this disk's own memory and hashed from there: nothing reads the loader's
+   // copy again. With boot-payload-release=1 its whole pages go back to the VM the way XNU returns loader memory, and the
+   // range leaves the registry's /chosen/memory-map, so a second start finds no seed instead of freed memory.
+@@ -414,10 +454,17 @@ bool NativeRamBlock::start(IOService *provider)
+     IODTFreeLoaderInfo("PackedRAMDisk", reinterpret_cast<void *>(physical), static_cast<int>(bytes));
+     native_ram_block_seed_released = static_cast<uint32_t>(bytes >> 12);
+   }
++#endif
+   memcpy(native_ram_block_seed_sha256,seedHash,32);
+   native_ram_block_bytes = logical;
+-  native_ram_block_sparse=(sparse.pages||isBig)?1:0;
+-  native_ram_block_resident_bytes=isBig?big.resident:sparse.pages?sparse.resident:logical;
++  native_ram_block_sparse=sparse.pages?1:0;
++  native_ram_block_resident_bytes=sparse.pages?sparse.resident:logical;
++#ifndef RAM_BLOCK_VOLATILE_ONLY
++  if (isBig) {
++    native_ram_block_sparse = 1;
++    native_ram_block_resident_bytes = big.resident;
++  }
++#endif
+   // The medium is memory or, with the persistent store, flash: neither seeks. IOMediaBSDClient answers DKIOCISSOLIDSTATE from this
+   // dictionary, found from any media above this device; without it XNU treats the disk as rotating (the swap thresholds of a hard
+   // disk when the swap files live here, throttle periods, read-ahead and page-in cluster sizes, the mount's MNTK_SSD).
+@@ -446,6 +493,7 @@ IOReturn NativeRamBlock::doAsyncReadWrite(IOMemoryDescriptor *buffer, UInt64 blo
+   IOLockLock(gate);
+   const uint64_t gated = mach_absolute_time();
+   if (!online) { IOLockUnlock(gate); return kIOReturnNotReady; }
++#ifndef RAM_BLOCK_VOLATILE_ONLY
+   if (direct) {
+     ++inflight;
+     IOLockUnlock(gate);
+@@ -467,7 +515,6 @@ IOReturn NativeRamBlock::doAsyncReadWrite(IOMemoryDescriptor *buffer, UInt64 blo
+     completion->action(completion->target, completion->parameter, result, done);
+     return kIOReturnSuccess;
+   }
+-  uint64_t actual;bool noMemory=false;
+   if(isBig && !direct) {
+     // Before the store is attached (APFS probes the disk for its volume UUID long before the kernel asks for the Data volume, which is what
+     // attaches the store) a disk this size is read from its seed alone; it has no volatile mode, so writes wait.
+@@ -494,7 +541,9 @@ IOReturn NativeRamBlock::doAsyncReadWrite(IOMemoryDescriptor *buffer, UInt64 blo
+     }
+     IOLockUnlock(gate);return kIOReturnNotReady;
+   }
+-  if(sparse.pages||isBig){
++#endif
++  uint64_t actual;bool noMemory=false;
++  if(sparse.pages){
+     struct Operations {
+       IOMemoryDescriptor *buffer;
+       uint8_t *allocate(){return static_cast<uint8_t *>(IOMallocZero(4096));}
+@@ -505,6 +554,7 @@ IOReturn NativeRamBlock::doAsyncReadWrite(IOMemoryDescriptor *buffer, UInt64 blo
+     {
+     actual=ramSparseIO(sparse,write,block*512,bytes,ops,noMemory);
+     }
++#ifndef RAM_BLOCK_VOLATILE_ONLY
+     if(!direct && write && actual==bytes && overlay.active && !overlay.readOnly){
+       StoreOps store;
+       uint64_t firstPage=block*512/4096,lastPage=(block*512+bytes-1)/4096;
+@@ -518,9 +568,10 @@ IOReturn NativeRamBlock::doAsyncReadWrite(IOMemoryDescriptor *buffer, UInt64 blo
+         i+=n;
+       }
+     }
++#endif
+     if(write)__atomic_fetch_add(&native_ram_block_writes,1,__ATOMIC_RELAXED);
+     else __atomic_fetch_add(&native_ram_block_reads,1,__ATOMIC_RELAXED);
+-    native_ram_block_resident_bytes=isBig?big.resident:sparse.resident;
++    native_ram_block_resident_bytes=sparse.resident;
+   }else if (buffer->getDirection() == kIODirectionIn) {
+     actual = buffer->writeBytes(0, memory + block * 512, bytes);
+     __atomic_fetch_add(&native_ram_block_reads, 1, __ATOMIC_RELAXED);
+@@ -548,6 +599,7 @@ IOReturn NativeRamBlock::doAsyncReadWrite(IOMemoryDescriptor *buffer, UInt64 blo
+   return kIOReturnSuccess;
+ }
+ 
++#ifndef RAM_BLOCK_VOLATILE_ONLY
+ // A direct-mode request, without the gate (see stagePool for what it locks). *waited gains the time spent waiting for locks.
+ IOReturn NativeRamBlock::directReadWrite(IOMemoryDescriptor *buffer, uint64_t offset, uint64_t bytes, uint64_t *actual,
+                                          uint64_t *waited)
+@@ -586,23 +638,31 @@ IOReturn NativeRamBlock::directReadWrite(IOMemoryDescriptor *buffer, uint64_t of
+   giveStage(buf);
+   return *actual == bytes ? kIOReturnSuccess : kIOReturnIOError;
+ }
++#endif
+ 
+ void NativeRamBlock::stop(IOService *provider)
+ {
++#ifndef RAM_BLOCK_VOLATILE_ONLY
+   if (flushCall) thread_call_cancel_wait(flushCall);
+   // No new request starts; the direct requests still running finish first. Then what is still unflushed reaches the medium.
++#endif
+   if (gate) {
+     IOLockLock(gate);
+     online = false;
++#ifndef RAM_BLOCK_VOLATILE_ONLY
+     while (inflight) IOLockSleep(gate, &inflight, THREAD_UNINT);
++#endif
+     IOLockUnlock(gate);
++#ifndef RAM_BLOCK_VOLATILE_ONLY
+     if (bitLock && flushMutex && flushRw) flushStore(false);
++#endif
+   }
+   IOBlockStorageDevice::stop(provider);
+ }
+ 
+ void NativeRamBlock::free()
+ {
++#ifndef RAM_BLOCK_VOLATILE_ONLY
+   if (flushCall) { thread_call_cancel_wait(flushCall); thread_call_free(flushCall); flushCall = nullptr; }
+   if (dirtyBits) { IOFree(dirtyBits, dirtyBytes); dirtyBits = nullptr; dirtyBytes = 0; overlay.dirty = nullptr; }
+   if (overlayBits) { IOFree(overlayBits, persist::bitmapBlocks(sparse.bytes / 4096) * persist::kBlock); overlayBits = nullptr; }
+@@ -615,12 +675,15 @@ void NativeRamBlock::free()
+     if (big.page) IOFree(big.page, (big.capacity ? big.capacity : 1) * sizeof(uint8_t *));
+     big = {}; isBig = false;
+   }
++#endif
+   if (gate) { IOLockFree(gate); gate = nullptr; }
++#ifndef RAM_BLOCK_VOLATILE_ONLY
+   if (poolLock) { IOLockFree(poolLock); poolLock = nullptr; }
+   if (rangeLock) { IOLockFree(rangeLock); rangeLock = nullptr; }
+   if (bitLock) { IOLockFree(bitLock); bitLock = nullptr; }
+   if (flushMutex) { IOLockFree(flushMutex); flushMutex = nullptr; }
+   if (flushRw) { IORWLockFree(flushRw); flushRw = nullptr; }
++#endif
+   if(sparse.pages){
+     for(uint64_t i=0;i<sparse.bytes/4096;++i)if(sparse.pages[i])IOFree(sparse.pages[i],4096);
+     IOFree(sparse.pages,(sparse.bytes/4096)*sizeof(uint8_t *));sparse={};
+@@ -667,7 +730,9 @@ static int selectVolumeSeed(const char *uuid, dev_t *device, char *path, size_t
+     for (IOService *provider = media; provider && depth++ < 64; provider = provider->getProvider()) {
+       NativeRamBlock *ram = OSDynamicCast(NativeRamBlock, provider);
+       if (!ram) continue;
++#ifndef RAM_BLOCK_VOLATILE_ONLY
+       ram->attachStore();
++#endif
+       if (!ram->seedInfo(&base,&bytes,hash)) continue;
+       candidate = static_cast<dev_t>(makedev(mjr->unsigned32BitValue(), mnr->unsigned32BitValue()));
+       snprintf(candidatePath, sizeof(candidatePath), "/dev/%s", name->getCStringNoCopy());

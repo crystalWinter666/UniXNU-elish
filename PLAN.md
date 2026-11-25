@@ -1,5 +1,15 @@
 # 小米平板 5 Pro（elish）iPadOS 17 移植计划
 
+## 当前检查点 · run28
+
+4 GiB RAM-only run28 从 21H461 Apple Restore APFS 卷启动，实机录像出现第四条青色标记。该探针仅在 PID 1 成功写入 `kern.initproc_spawned=1` 后绘制，确认 Apple `launchd` 已执行到 `main()`。run27 的复位时序也符合恢复根卷挂载成功后的检查点。完整 System 根卷、Setup 和 Data 持久化仍待验证。UFS DMA 保持关闭，待确认 elish stream/context 所有权。[恢复启动记录](reports/elish-restore-root-20261125.md)
+
+## 当前检查点 · run21
+
+4 GiB RAM-only run21 已通过 XNU VM 初始化并到达 BSD 根设备发现。设备照片显示 `Failed to mount root device`（`IOKitBSDInit.cpp:984`），四个栈帧与镜像中的 XNU 符号吻合。run20 的 ramoops 记录了 `0xc007c000+0x100000000` 窗口和成功的 EBS。
+
+当前工作是用 RamBlock 发布同一 21H461 IPSW 的恢复 APFS 卷，以实机根挂载和 Apple PID 1 为验收条件。完整 iPadOS System 根卷仍依赖设备存储路径。UFS DMA 保持关闭，待确认 elish stream/context 所有权。[实机证据](reports/elish-run21-root-panic-20261125.md)
+
 ## 当前检查点 · 2026-11-25 17:36 CST
 
 用户手动执行 run12 `fastboot boot` RAM-only 镜像后报告看到与此前相近的彩条；本次没有照片，不能确认彩条之外的 XNU 检查点，也不能证实 `_arm_vm_init()` 返回。主机先前同一命令的一次启动获 `Sending OKAY` / `Booting OKAY`，但约 6 秒后 fastboot 重枚举，未达到探针设置的 15 秒 post-MMU hold；另一次主机命令因 `remote: 'unknown command'` 失败。设备最后状态未再探测，避免把用户手动启动后的实时状态当成旧快照。

@@ -23,4 +23,6 @@ The build support patch adds Android v3 kernel packaging without an appended DTB
 
 New elish images use the `oc-like` boot menu theme. Pass `--boot-menu-theme default` to `scripts/package.sh` to select the classic UniXNU menu for a build.
 
+The NT36523 touch candidate uses `elish-touch=1` and a RAM-only boot. The candidate builder enables an on-screen stage and report snapshot at the 420-second deadline. See the [touch bring-up and capture commands](reports/elish-run81-touch-20261126.md#deadline-snapshot-and-ramoops-reader).
+
 For System-root diagnostics, first build the host image with `../UniXNU/unixnu build userdata -D . --os ipados-17.7.11-21H461`. Refresh the active configuration with `../UniXNU/unixnu defconfig elish_defconfig -D . --os ipados-17.7.11-21H461`, then set `UNIXNU_ELISH_ROOT_IMAGE` to the resulting `userdata-root.img` when building the kernel. The archive recipe verifies both complete IPSW windows before generating `tree/build/elish-ufs/elish-root-digests.bin`. Pass that file to `unixnu build payload` with `--root-policies` and select `--kernel-arg elish-ufs-root=1`. XNU authenticates the handoff against the linked SHA-256 before publishing the UFS windows.

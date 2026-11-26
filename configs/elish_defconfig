@@ -13,7 +13,7 @@
 # 明确留到后续阶段的开关：
 #   NATIVE_UFS          SM8250 是 UFS 3.1，需 GCC/PHY/ICE 常量                      → 阶段 2
 #   NATIVE_MOBILE_DISPLAY / NATIVE_LEGACY_DISPLAY    SM8250 DPU                     → 阶段 3
-#   触摸                开关名待核对                                                  → 阶段 3
+#   触摸                诊断时以 elish-touch=1 明确启用，默认不访问触控硬件              → 阶段 3
 #   VERIFIED_ROOT_PROBE / BOOT_PROGRESS    独立的开发诊断                         → 阶段 4
 #   NATIVE_ADRENO       A740 套件；elish 是 Adreno 650                              → 阶段 5（GPU）
 # SHENG_PMGR 链接 original-PMGR 桥（scripts/build-platform-power.py，不访问硬件）；缺了它原版
@@ -41,7 +41,7 @@ CONFIG_XNU_SHENG_PMGR=y
 
 CONFIG_XNU_CRYPTO_BOOTSTRAP="prelinked"
 # 被裁掉组件的探针需要 no-op 钩子（scripts/build-link-stubs.py，通用）。
-CONFIG_XNU_EXTRA_LD_ARCHIVES="{tree}/build/link-stubs/libLinkStubs.a -Wl,-force_load,{tree}/build/elish-ufs/libElishUfs.a -Wl,-force_load,{tree}/build/ram-block/libRamBlock.a"
+CONFIG_XNU_EXTRA_LD_ARCHIVES="{tree}/build/link-stubs/libLinkStubs.a -Wl,-force_load,{tree}/build/elish-ufs/libElishUfs.a -Wl,-force_load,{tree}/build/ram-block/libRamBlock.a {tree}/build/elish-touch/libElishTouch.a"
 CONFIG_XNU_NATIVE_MOBILE_DISPLAY=n
 CONFIG_XNU_ARMVIRT_PLATFORM=n
 

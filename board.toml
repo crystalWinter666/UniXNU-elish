@@ -44,6 +44,8 @@ archives = [
   "component:SoftwareAES",
   "build-software-aes-bindings.py",
   "component:AppleKeyStoreState",
+  "build-elish-touch.py",
+  "build-elish-touch-hid.py",
   "build-elish-ufs.py",
   "bind-elish-ram-block.py",
   "build-mockfs-fixture.py",
@@ -54,6 +56,7 @@ archives = [
 ]
 
 [kernel.embedded_components]
+QcomGeniSpi = "build-elish-touch.py"
 RamBlock = "bind-elish-ram-block.py"
 GopFramebuffer = "build-elish-legacy-display.py"
 
@@ -109,7 +112,7 @@ include_dirs = ["soc:dts"]
 dtb = "../device-tree/hardware.dtb"
 
 [components]
-include = ["ArmDTPlatform", "ArmCpu", "SoftwareAES", "RamBlock", "GopFramebuffer", "XnuPrelink", "DarwinBoot", "AppleKeyStoreState"]
+include = ["ArmDTPlatform", "ArmCpu", "SoftwareAES", "RamBlock", "GopFramebuffer", "XnuPrelink", "DarwinBoot", "AppleKeyStoreState", "QcomGeniSpi"]
 
 [payload]
 volume = "ELISHESP"

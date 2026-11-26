@@ -1,5 +1,9 @@
 # 小米平板 5 Pro（elish）iPadOS 17 移植计划
 
+## 正在验证 · run81 触控 · 2026-11-26
+
+以 run80 为对照，保持只读 UFS、RAM Data 和 GOP CPU-copy 不变。新增仅由 `elish-touch=1` 启用的 QUP0 SE4 PIO、NT36523 fw01 SRAM 下载、触点解码及 21H461 HID 路径。run81e 录像确认原版 Hello 及物理上滑，语言列表未打开，点选未验收。已自动回到 fastboot，只用不挂载持久分区的只读回读镜像提取日志，再按 SPI 协议/FIFO、固件 PID/版本、触点帧和 HID 匹配分层定位。后续触控候选自动返回默认 420 秒，从 UFS 服务启动计时。不写持久分区。[构建与实机记录](reports/elish-run81-touch-20261126.md)
+
 ## 已验收 · run80 · 2026-11-26
 
 从已安装的 UFS `boot_b` 正常启动到原版 iPadOS 17.7.11（`21H461`）Hello。约 457 秒的录像仍拍到问候语，超过 run79 的 382.55 秒重启时间。本轮保留可写 RAM Data。[实机记录](reports/elish-run80-installed-hello-20261126.md) · [内屏照片](reports/elish-run80-installed-hello-20261126.jpg)

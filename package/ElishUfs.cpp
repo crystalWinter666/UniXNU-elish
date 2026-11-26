@@ -28,6 +28,9 @@ extern "C" struct msgbuf *msgbufp;
 extern "C" void elish_snapshot_processes(int sample[10], char *springboard, char *chronod, size_t stackSize);
 extern "C" void elish_format_user_breakpoint(char *out, size_t size);
 extern "C" void elish_key_store_start();
+void elish_touch_start();
+void elish_touch_log();
+void elish_touch_deadline_snapshot();
 extern "C" void elish_key_store_snapshot(char *out, size_t size);
 #if ELISH_LEGACY_DISPLAY
 extern "C" void elish_snapshot_display(unsigned values[8]);
@@ -264,6 +267,8 @@ void resetToFastboot(const char *message, bool hold)
 
 void resetDeadline(thread_call_param_t, thread_call_param_t)
 {
+    elish_touch_log();
+    elish_touch_deadline_snapshot();
     resetToFastboot("RAM-only deadline reached", false);
 }
 
@@ -782,6 +787,7 @@ extern "C" void elish_report_data_mount(const char *device, const char *uuid)
     strlcpy(dataMountUuid, uuid, sizeof(dataMountUuid));
     __atomic_store_n(&dataMountConfirmed, 1, __ATOMIC_RELEASE);
     elish_key_store_start();
+    elish_touch_start();
 }
 
 extern "C" int elish_system_root_authorized(dev_t device)

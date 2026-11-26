@@ -1,5 +1,15 @@
 # UniXNU elish UEFI 移植交接
 
+## 当前交接 · run81 触控 · 2026-11-26
+
+- run84 真机空闲测试到达 Hello，随后自动回到 bootloader fastboot。放大版只读查看器回读 `stage=7`、HID `stage=5 match=1`，边沿、读取和报告均为 0。下一轮复用 run84，录下实机上滑，并用同一查看器回读计数。[镜像和实机证据](reports/elish-run81-touch-20261126.md#event-acquisition)
+- run83 真机已完成 SE4 初始化并匹配 IOHIDEventDriver。40 次固定间隔读取均被解码拒绝，随后扫描停止。后续候选按原厂 GPIO39 上升沿读取 79 字节事件，保留前 65 字节手指数据的校验。[读帧调整与实机记录](reports/elish-run81-touch-20261126.md#event-acquisition)
+- 后续 ramoops 回读拍到 `stage=2`，失败发生在 QUP 时钟等待。已按 MiCode Kona 分支定义修正从 AHB 的硬件门控判断，下一版诊断同时记录投票寄存器和三条分支状态。[时钟修正与验证](reports/elish-run81-touch-20261126.md#qup0-clock-admission)
+- 首版只读 UEFI 查看器在内屏显示了文本，录像分辨率不足以读取寄存器。其 PSCI 复位后没有枚举 fastboot，内屏随后出现已安装系统的苹果标志。新版查看器改用 PMIC 热复位。触控候选增加 420 秒终点快照，可从内屏读取 SE4 寄存器、触点和 HID 计数。设备需回到 bootloader fastboot 才能上机验证。[构建和回读步骤](reports/elish-run81-touch-20261126.md#deadline-snapshot-and-ramoops-reader)
+- run80 保留在 `boot_b` 作为恢复基线。新镜像只通过核验过的 bootloader `fastboot -s 4bed07e4 boot` 送入 RAM；不使用 `continue`，不写 boot、Data 或其他持久分区。
+- 已确认工厂 fw01 的精确字节并实现 opt-in transport/解析/HID 路径。在 XNU 读到 QUP S4 已载入 SPI 且启用 FIFO 前不发 Novatek 命令；触控不切换面板电源或 GPIO75。
+- run81e 已通过封包读回及 21H461 HID 链接检查。19:20:39 CST 核验设备身份后发出 RAM 启动，fastboot 两阶段均返回 `OKAY`。连续录像写入 `run81e-touch-hid/device-attempt.LumUbu/camera.mkv`。录像 `05:46`–`05:56` 拍到 Hello 内屏上滑尝试，问候动画继续，未打开语言列表。19:31:00 CST 已自动回到核验过的 bootloader fastboot。暂停启动其他镜像，先用独立固件镜像回读本轮日志；旧 Lineage reader 会尝试读写挂载，不能作本轮回读。后续候选默认 420 秒；镜像哈希、路径及命令见 [run81 报告](reports/elish-run81-touch-20261126.md)。
+
 ## 最新交接 · run80 · 2026-11-26
 
 - 活动槽 `boot_b` 已安装 run80，平板经 Recovery 的 `adb -s 4bed07e4 reboot` 正常启动到原版 Hello。约 457 秒的录像仍显示问候语。[内屏照片](reports/elish-run80-installed-hello-20261126.jpg)

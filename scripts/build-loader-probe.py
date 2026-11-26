@@ -36,10 +36,12 @@ def main():
     probe_mode.add_argument("--ufs-root-windows", action="store_true", help="Validate both elish GPT copies, then sample the manifest and OS/SystemOS LBAs without writing")
     probe_mode.add_argument("--ufs-run-kernel", action="store_true", help="Preserve qualified UFS routes and enter XNU without touching the inherited queues")
     probe_mode.add_argument("--pmsg-readback", action="store_true", help="Log pmsg memory and the post-MMU return marker before DarwinBoot")
+    probe_mode.add_argument("--ramoops-viewer", action="store_true", help="Display preserved touch diagnostics in DXE without a ramdisk")
     args = parser.parse_args()
-    if args.sec_smmu_readonly and args.payload is not None:
-        parser.error("--sec-smmu-readonly requires an empty ramdisk; omit --payload")
-    if not args.sec_smmu_readonly and args.payload is None:
+    firmware_only = args.sec_smmu_readonly or args.ramoops_viewer
+    if firmware_only and args.payload is not None:
+        parser.error("firmware-only diagnostics require an empty ramdisk; omit --payload")
+    if not firmware_only and args.payload is None:
         parser.error("--payload is required for loader probes")
     core, uefi, dtb, out = [p.resolve() for p in (args.unixnu, args.uefi, args.dtb, args.out)]
     payload = args.payload.resolve() if args.payload is not None else None
@@ -55,8 +57,17 @@ def main():
     switch = 'ELISH_LOADER_PROBE = "FALSE"'
     if original.count(switch) != 1:
         raise SystemExit("Expected exactly one disabled ELISH_LOADER_PROBE in board.toml")
-    replacement = ('ELISH_SEC_SMMU_PROBE = "TRUE"' if args.sec_smmu_readonly
-                   else 'ELISH_LOADER_PROBE = "TRUE"')
+    if args.ramoops_viewer:
+        # The normal DEBUG SEC logger clears the preserved console on entry.
+        logging = 'ELISH_RAMOOPS_LOG = "TRUE"'
+        if original.count(logging) != 1:
+            raise SystemExit("Expected exactly one enabled ELISH_RAMOOPS_LOG in board.toml")
+        original = original.replace(logging, 'ELISH_RAMOOPS_LOG = "FALSE"')
+        replacement = 'ELISH_RAMOOPS_VIEWER = "TRUE"'
+    elif args.sec_smmu_readonly:
+        replacement = 'ELISH_SEC_SMMU_PROBE = "TRUE"'
+    else:
+        replacement = 'ELISH_LOADER_PROBE = "TRUE"'
     if args.run_kernel or args.ufs_run_kernel:
         replacement += '\nELISH_LOADER_PROBE_RUN_KERNEL = "TRUE"'
     if args.ufs_clocks_readonly:
@@ -89,6 +100,8 @@ def main():
          "--output", str(out / "boot.img")],
     ]
     probe_description = (
+        "Read touch lines from the preserved console ring in DXE and return to fastboot"
+        if args.ramoops_viewer else
         "Capture inherited SMMUv2 stream mappings in SEC before PlatformInitialize; warm-restart without entering DXE"
         if args.sec_smmu_readonly else
         "Validate native capacity and both GPTs, then read bounded userdata root-window samples before DarwinBoot"

@@ -2,7 +2,7 @@
 
 ## 当前交接 · run81 触控 · 2026-11-26
 
-- run84 真机空闲测试到达 Hello，随后自动回到 bootloader fastboot。放大版只读查看器回读 `stage=7`、HID `stage=5 match=1`，边沿、读取和报告均为 0。下一轮复用 run84，录下实机上滑，并用同一查看器回读计数。[镜像和实机证据](reports/elish-run81-touch-20261126.md#event-acquisition)
+- run84 的 RAM 触控候选已完成真机上滑：Hello 底边上滑后界面有响应。只读 ramoops 查看器回读 `stage=7`、85 次读取/IRQ、0 个 SPI 错误或坏帧，以及 HID `stage=5 match=1`、85 份报告。设备已回到 bootloader fastboot；语言选择点击与 Setup 后续仍待验证。[镜像、录像和计数](reports/elish-run81-touch-20261126.md#run84-physical-gesture-acceptance)
 - run83 真机已完成 SE4 初始化并匹配 IOHIDEventDriver。40 次固定间隔读取均被解码拒绝，随后扫描停止。后续候选按原厂 GPIO39 上升沿读取 79 字节事件，保留前 65 字节手指数据的校验。[读帧调整与实机记录](reports/elish-run81-touch-20261126.md#event-acquisition)
 - 后续 ramoops 回读拍到 `stage=2`，失败发生在 QUP 时钟等待。已按 MiCode Kona 分支定义修正从 AHB 的硬件门控判断，下一版诊断同时记录投票寄存器和三条分支状态。[时钟修正与验证](reports/elish-run81-touch-20261126.md#qup0-clock-admission)
 - 首版只读 UEFI 查看器在内屏显示了文本，录像分辨率不足以读取寄存器。其 PSCI 复位后没有枚举 fastboot，内屏随后出现已安装系统的苹果标志。新版查看器改用 PMIC 热复位。触控候选增加 420 秒终点快照，可从内屏读取 SE4 寄存器、触点和 HID 计数。设备需回到 bootloader fastboot 才能上机验证。[构建和回读步骤](reports/elish-run81-touch-20261126.md#deadline-snapshot-and-ramoops-reader)

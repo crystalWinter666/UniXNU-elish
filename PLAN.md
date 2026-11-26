@@ -311,7 +311,8 @@ run18 post-VM marker 与 pmsg readback 已 RAM-only 实测，marker 为 `0x00004
 - 2026-11-23 ROM 到位后复核：官方镜像目录 `/root/repo/elish_os1.0.2.0` 含 28 个 `.img` 文件，总计约 8.2 GB。`xbl.img` SHA-256 `9a3a3bb92e6cf478b227f70dd1bd140fde32982994a6c34a07bd314ea0acb72f`、`dtbo.img` SHA-256 `4d797a4d3ea9ea16168128a9c189d7f32bf21bd1b049205fe39959a90046b9d7` 与既有记录相符。`vendor.img` 是 ext4，`build.prop` 确认 `elish` / `M2105K81AC` / Android 13 / `V816.0.2.0.TKYCNXM`。镜像目录没有 GPT/rawprogram 分区布局文件；原始字节搜索在 XBL 外未找到 `uefiplatLA.cfg`，vendor 的 `/firmware` 目录也没有同名文件。`/etc/init.panel_info.sh` 从运行时 sysfs 读取面板/触控厂商编号；vendor 固件目录含 `NT36xxx_MP_Setting_Criteria_595C.csv` 和 `...5961.csv`，但静态 ROM 没有表明本机使用哪一组。这些输入完成了固件身份与只读文件系统核对，但不提供运行时 DRAM map 或 userdata 起始 LBA。
 - [ ] 验证 CPU/中断、内存映射与 DMA；再实现 SM8250 UFS/根卷/Data，使用已测 GPT 几何并读取目标卷 UUID，完成 iPadOS trust cache/owner chain 及用户态启动，并验证 Data 持久化和恢复。
   - 2026-11-24: The IPSW OS/SystemOS userdata-root container is now built and its manifest and both window hashes pass read-back validation. The APFS System-role root volume UUID in the OS image matches `board.toml`; only the host-side identity is verified, with device UFS reads and mounting still pending.
-- [ ] 实现并验收显示/亮度和 Novatek NT36523 触控；再评估 Adreno 650/GPU 与 Metal，避免误用 SM8550 Adreno 740 路径。
+- [x] 实现并真机验证 Novatek NT36523 触控的 Hello 底边上滑响应及 HID 事件；语言选择点击和 Setup 完成仍待验证。
+- [ ] 实现并验收显示/亮度；再评估 Adreno 650/GPU 与 Metal，避免误用 SM8550 Adreno 740 路径。
 - [ ] 逐项适配 Wi-Fi/蓝牙、USB、音频、摄像头、按键/传感器、电池、温控、频率调度和休眠/唤醒；无可用实现时记录限制，不将其标成已支持。
 - [ ] 做重复冷启动、长时间运行、温控/功耗、升级与救援验证；完善移植记录、CI、构建输入 pin 和发布包。
 

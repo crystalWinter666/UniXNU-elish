@@ -4,7 +4,7 @@ schema_version = 1
 name = "elish"
 soc = "SM8250-AC"
 os_profile = "ipados-17.7.11-21H461"
-summary = "Xiaomi Pad 5 Pro Wi-Fi (M2105K81AC). RAM-only run79 displayed the original iPadOS 17.7.11 (21H461) Setup Assistant Hello screen on the internal panel using read-only UFS System and SystemOS and writable APFS RAM Data. Touch, language selection, Setup completion, the home screen and Data persistence remain unverified."
+summary = "Xiaomi Pad 5 Pro Wi-Fi (M2105K81AC). Run79 reached the original iPadOS 17.7.11 (21H461) Setup Assistant Hello screen from fastboot boot. Run80 reached the same page from the installed UFS boot slot. Both builds use read-only UFS System and SystemOS and writable APFS RAM Data. Touch, language selection, Setup completion, the home screen and Data persistence remain unverified."
 
 [[area]]
 id = "configuration"
@@ -18,6 +18,7 @@ findings = ["The Wi-Fi elish target is distinct from 5G enuma. The sibling Forma
   "The opt-in loader probe manifest now records the reset and clock prerequisites for UFSHCI queue snapshots. The normal board profile excludes the diagnostic.",
   "The board enables the XNU source-storage root audit and SystemOS union startup. The UFS driver supplies the verified-media callbacks. Run56 confirmed the UFS System root and Apple launchd PID 1. Restore retains its separate RamBlock path.",
   "board.toml sets [payload] boot_menu_theme to oc-like for local and CI builds. A build can override it with --boot-menu-theme.",
+  "The archive list adds AppleKeyStoreState and the 21H461 GopFramebuffer archive recipe. The ADT sets display-scale=2 for the 1600x2560 panel.",
 ]
 completion = ["The selected components and patch order appear in status; all declared source commits match unixnu.lock; board, README and porting record identify the same target."]
 limits = ["Run79 validates the Hello screen for the exact diagnostic image. Production prelink qualification fields remain false. Setup completion and Data persistence are untested."]
@@ -36,6 +37,7 @@ findings = ["The HII-order image reached the menu. Run04 subsequently confirms F
   "Run35 extends the diagnostic-only UEFI hook with gated UFSHCI queue register reads. The DEBUG FD built successfully and remains untested on hardware.",
   "Run42 used the opt-in loader probe to read six OS/SystemOS layout samples after validating both GPTs. The probe stopped its queue and warm-restarted before DarwinBoot. Run56 used the separate firmware handoff that preserves the measured routes and leaves UFS commands to XNU.",
   "UniXNU selects the oc-like renderer from [ui].theme in the payload's EFI/UniXNU/unixnu.toml.",
+  "Run80 reused run79's firmware and FDT. A normal reboot from Recovery loaded the installed Android v3 image from boot_b and reached Setup Assistant on the internal panel.",
 ]
 completion = ["The firmware enters UniXNU, publishes a validated framebuffer, exposes the initrd volume and preserves a measured memory map."]
 limits = ["Run56 qualifies the firmware handoff for the tested warm-boot image through XNU UFS reads and PID 1. UFS cold initialization and full peripheral memory ownership remain unverified."]
@@ -68,6 +70,7 @@ findings = ["The ramoops probe recorded both Qualcomm RAM Partition banks and 47
   "Run33 ID2 encodes 36-bit apps-SMMU IAS, OAS and UBS. These capabilities do not identify a UFS mapping or establish reachability of XNU DMA buffers.",
   "The XNU UFS archive adopts the measured bypass routes, bounds its physically contiguous DMA arena below 4 GiB, and maintains dedicated cache lines for the descriptors and data. Run46 verified the arena at 0xD0132000 with seven known-block reads and unchanged SMMU fault status. Run56 passed the root digest bundle through a separate DarwinBoot RootPolicies extent.",
   "UniXNU reads the boot-menu theme from the payload configuration before DarwinBoot constructs the XNU memory handoff.",
+  "Run79 reached Setup Assistant with the configured 4 GiB XNU window and 1 GiB logical RAM Data seed. Run80 reused the same kernel, ADT and seed. The Hello capture contains no new memory map or DMA measurements.",
 ]
 completion = ["All handoff regions are accounted for and each enabled DMA engine uses a documented, verified allocation and cache policy."]
 limits = ["UFS read DMA is verified for the tested arena and inherited routes. Ownership of other peripherals' buffers remains open."]
@@ -113,6 +116,9 @@ paths = ["board.toml", "dts/elish.dts", "configs/**", "package/**", "scripts/bin
   "reports/elish-run57-mount-panic-20261126.jpg",
   "reports/elish-run58-writable-ram-data-20261126.md",
   "reports/elish-run58-pre-mmu-20261126.jpg",
+  "reports/elish-run60-data-enoent-20261126.jpg",
+  "reports/elish-run61-pre-mmu-20261126.jpg",
+  "reports/elish-run62-data-springboard-20261126.jpg",
   "reports/elish-run79-key-store-20261126.md",
   "scripts/build-elish-ufs.py",
   "patches/xnu/elish-ufs-probe.patch",
@@ -158,6 +164,7 @@ findings = ["The 9,382,658,048-byte userdata-root image contains the target IPSW
   "Run62 verified /private/var on the read-write APFS RamBlock volume selected by UUID 7D443C28-95AC-49F8-AF25-4FC12FBC93E5, with launchd still running as PID 1 and SpringBoard present.",
   "Read-only inspection confirmed the run75 seed's /private/var/mobile/tmp was root-owned and mode 0755. Run76 changes that directory to 501:501 on a copy of the RAM seed, preserves the APFS volume UUID and verifies that Setup completion markers are absent.",
   "Run78 confirmed SessionSyncEngine traps after MKBEventsRegister returns null. Run79 selects the catalog AppleKeyStoreState component behind elish-aks=1 after the writable Data mount when /chosen/ephemeral-storage is set. The camera captured Hello with the same verified UFS inputs and 1 GiB RAM Data seed.",
+  "Run80 installed the boot image on UFS LUN 4 LBA 393654–442805 and matched the full readback through both partition and LUN devices. Setup still uses the same volatile RAM Data seed. See reports/elish-run80-installed-hello-20261126.md.",
   "When supplied with --root-policies, the payload builder stages the digest bundle as EFI/UniXNU/Payloads/kernel.macho.vroot beside the selected kernel.",
 ]
 completion = ["Controller and DMA facts match hardware; capacity/GPT and known reads are correct; OS/SystemOS mount; Data writes survive the specified restart and recovery checks."]
@@ -194,14 +201,14 @@ evidence = [{kind = "host", reference = "reports/elish-userdata-build-20261124.m
 id = "display"
 status = "implemented"
 components = ["GopFramebuffer"]
-paths = ["package/**", "dts/elish.dts", "configs/**", "board.toml", "scripts/build-elish-legacy-display.py", "reports/elish-run63-backboardd-20261126.md", "reports/elish-run64-run65-gop-20261126.md", "reports/elish-run79-key-store-20261126.md", "reports/elish-run79-hello-20261126.jpg"]
+paths = ["package/**", "dts/elish.dts", "configs/**", "board.toml", "scripts/build-elish-legacy-display.py", "reports/elish-run63-backboardd-20261126.md", "reports/elish-run63-backboardd-20261126.jpg", "reports/elish-run64-run65-gop-20261126.md", "reports/elish-run64-gop-snapshot-20261126.jpg", "reports/elish-run79-key-store-20261126.md", "reports/elish-run79-hello-20261126.jpg", "reports/elish-run80-installed-hello-20261126.jpg"]
 inputs = ["Root ADB reports DRM connector card0-DSI-1 connected at 1600x2560 and modes of 120, 60 and 30 Hz. The kernel identifies the active panel as `xiaomi 42 02 0a video mode dual dsi cphy panel`; its raw backlight has maximum value 2047. The live touch properties are panel_vendor=S, panel_display=B and touch_vendor=4.", "The live FDT enables `/soc/spi@990000/novatek@0` as `novatek,NVT-ts-spi`, chip select 0, 19.2 MHz, TLMM IRQ GPIO 39. Android logs report a successful NT36523 firmware update from `novatek_nt36523_k81a_fw01.bin`, version 0x1a, controller PID 5961. Full reads are recorded in reports/elish-live-hardware-20261123.md."]
 configuration = ["GopFramebuffer has a board archive recipe for the 21H461 iPadOS Legacy ABI. It is enabled on diagnostic builds with CONFIG_XNU_NATIVE_LEGACY_DISPLAY=y. The ADT sets display-scale to 2 for the 1600x2560 framebuffer."]
 procedure = ["First inspect any firmware framebuffer without panel writes; identify the fitted panel before implementing display or backlight control."]
 findings = ["Stock DTBO source distinguishes elish board ID 47 from enuma board ID 46. Root ADB and the runtime DRM/Novatek logs identify this unit's K81 42_02_0a panel and the active NT36523 fw01 image with PID 5961. The earlier static ROM-only inventory could not distinguish these variants.", "Run28 and run56 show the firmware framebuffer through the XNU checkpoint for Apple PID 1. The run56 capture contains the mounted System and SystemOS device names.", "Run63 without -v sampled backboardd PID 57 at 185 seconds. The recorded screen showed diagnostics through the snapshot and no native UI.", "Run64 sampled backboardd PID 57 and SpringBoard PID 27 concurrently with GOP stage 10 and five successful user client opens. The camera coverage cuts off the completed-frame count."]
 completion = ["A known frame has correct geometry and colors; presentation and brightness control work across repeated boots."]
-limits = ["Run79 confirms the CPU-copy path presents animated Hello on the internal panel. Brightness control, panel power transitions and repeatability remain unverified."]
-next_action = ["Repeat the Hello boot with a longer interaction window and capture a physical swipe to the language selector."]
+limits = ["Run79 and run80 confirm that the CPU-copy path presents animated Hello on the internal panel. Brightness control and panel power transitions remain unverified."]
+next_action = ["Capture a physical swipe from Hello to the language selector."]
 evidence = [
   { kind = "device", reference = "reports/elish-run63-backboardd-20261126.md", result = "185-second snapshot showed launchd PID 1 and backboardd PID 57. No native frame was captured.", command = "fastboot -s 4bed07e4 boot run63-graphics-console/boot.img", revision = "16cedc7b8a9a417e3994e37f420dc6ec485a7da1" },
   { kind = "device", reference = "reports/elish-run64-run65-gop-20261126.md", result = "Run64 sampled GOP stage 10 with five successful user client opens. The screen capture does not include the completed-frame count or native UI.", command = "fastboot -s 4bed07e4 boot run64-gop-cpu/boot.img", revision = "16cedc7b8a9a417e3994e37f420dc6ec485a7da1" },
@@ -220,6 +227,7 @@ evidence = [
   { kind = "device", reference = "reports/elish-run64-run65-gop-20261126.md", result = "Run77 resolved the chronod sync wait into ActivityKit and counted 15 liveactivitiesd exits with latest wait status 0x5. The panel showed the Apple logo before the sample and Setup=0 at sampling.", command = "fastboot -s 4bed07e4 boot run77-session-daemon/boot.img", revision = "16cedc7b8a9a417e3994e37f420dc6ec485a7da1" },
   { kind = "device", reference = "reports/elish-run64-run65-gop-20261126.md", result = "Run78 recorded the first liveactivitiesd exception as ARM64 BRK #1. The original SessionSyncEngine executed the trap after MKBEventsRegister returned null. Setup=0.", command = "fastboot -s 4bed07e4 boot run78-session-breakpoint/boot.img", revision = "16cedc7b8a9a417e3994e37f420dc6ec485a7da1" },
   { kind = "device", reference = "reports/elish-run79-key-store-20261126.md", result = "Run79 presented the original iPadOS 21H461 Hello screen on the internal panel. The camera records the animated greeting and Swipe up to open. Language selection, touch, Setup completion and the home screen were not verified.", command = "fastboot -s 4bed07e4 boot run79-key-store/boot.img", revision = "16cedc7b8a9a417e3994e37f420dc6ec485a7da1" },
+  { kind = "device", reference = "reports/elish-run80-installed-hello-20261126.md", result = "Run80 reached the original Hello screen from the installed boot_b image. The panel still showed the animated greeting about 457 seconds after reboot.", command = "adb -s 4bed07e4 reboot", revision = "762cb40641600e4cc01833674f023f4158ff4e1c" },
 ]
 
 [[area]]
@@ -230,7 +238,7 @@ paths = ["package/**", "dts/elish.dts", "configs/**"]
 inputs = ["Root ADB reports NVTCapacitiveTouchScreen with ten slots, X 0–1599 and Y 0–2559, plus NVTCapacitivePen with X 0–12799, Y 0–20479, pressure 0–4095 and tilt -60..60. The live Novatek node uses SPI CS0 at 19.2 MHz and TLMM IRQ GPIO 39.", "Android dmesg reports NVT controller PID 5961, successful firmware update from `novatek_nt36523_k81a_fw01.bin` and firmware version 0x1a. Measurements and commands are in reports/elish-live-hardware-20261123.md."]
 configuration = ["No touch or button driver is selected in stage 1. The measured controller and firmware variant are board inputs for a later kernel-stage driver."]
 procedure = ["Confirm the active controller/firmware and coordinate orientation, then test contact, multitouch IDs, release events and buttons end to end."]
-findings = ["Live FDT and Android logs identify the Novatek NT36523 device, SPI wiring, controller PID 5961 and active fw01 image. The input device advertises ten touch slots and a separate pen device. This does not verify the corresponding UniXNU event path.", "Run28 and run56 stop at diagnostic PID 1 checkpoints before interactive touch or pen testing."]
+findings = ["Live FDT and Android logs identify the Novatek NT36523 device, SPI wiring, controller PID 5961 and active fw01 image. The input device advertises ten touch slots and a separate pen device. This does not verify the corresponding UniXNU event path.", "Run79 and run80 reached the Setup Assistant swipe prompt with no touch driver selected. No gesture response was captured."]
 completion = ["Touch maps correctly; simultaneous contacts retain stable IDs; releases and physical buttons produce expected events."]
 limits = ["No UniXNU touch, pen or button events have been tested on elish."]
 next_action = ["After kernel entry and memory/storage bring-up, select an NT36523-compatible driver and verify multitouch, pen, release and button events on the device."]
@@ -244,7 +252,7 @@ paths = ["package/**", "configs/**", "dts/**"]
 inputs = ["SM8250-AC is the Adreno 650 platform; the pinned SoC package is a candidate source for A650 GMU support."]
 configuration = ["No GPU component is selected in stage 1. Do not use the Adreno 740/SM8550 kit."]
 procedure = ["Defer GPU work until storage, display, memory ownership, firmware and SMMU paths are stable."]
-findings = ["The stage-1 component set leaves the Adreno 650 GPU path disabled. The diagnostic framebuffer uses firmware display output.", "The run56 System boot retains the firmware framebuffer for the PID 1 checkpoint. Adreno 650 acceleration remains unverified."]
+findings = ["The stage-1 component set leaves the Adreno 650 GPU path disabled. The diagnostic framebuffer uses firmware display output.", "Run79 and run80 presented Hello using the GopFramebuffer CPU-copy path with no Adreno 650 component selected."]
 completion = ["GPU submissions, memory mapping, fences and a known Metal-rendered image pass on hardware."]
 limits = ["No GPU firmware, power policy or XNU/Metal execution has been validated on elish."]
 next_action = ["Keep GPU disabled until the earlier bring-up stages are verified."]
@@ -258,7 +266,7 @@ paths = ["package/**", "dts/**", "proprietary-files.txt"]
 inputs = ["The target is the Wi-Fi SKU. The stock SoC DTB contains a qca6390-compatible CNSS node; the exact live Wi-Fi firmware and operating path remain to be confirmed."]
 configuration = ["No wireless component or firmware is selected in stage 1."]
 procedure = ["Identify the active Wi-Fi/BT hardware and firmware, then test scanning, association, traffic and Bluetooth separately."]
-findings = ["The stage-1 device tree inherits SoC declarations. Wi-Fi transport and firmware remain to be verified on this board.", "Run56 stops at the System-root PID 1 checkpoint before network bring-up. The board package addition is the UFS storage driver."]
+findings = ["The stage-1 device tree inherits SoC declarations. Wi-Fi transport and firmware remain to be verified on this board.", "The Setup Assistant boot adds RAM Data, AppleKeyStoreState and GOP presentation while the board component list still omits Wi-Fi and Bluetooth. The Hello test did not reach network selection."]
 completion = ["Wi-Fi association and sustained traffic pass; Bluetooth pairing and data transfer are separately verified."]
 limits = ["The candidate DT node does not establish a working UniXNU driver or identify every wireless firmware input."]
 next_action = ["Confirm the active Wi-Fi/BT devices and firmware ownership from the target configuration."]
@@ -272,7 +280,7 @@ paths = ["board.toml", "porting.toml"]
 inputs = ["M2105K81AC is the Xiaomi Pad 5 Pro Wi-Fi SKU."]
 configuration = ["No cellular modem, SIM, baseband firmware or cellular data path is configured."]
 procedure = ["Do not import enuma/5G modem support into the elish Wi-Fi port."]
-findings = ["The measured M2105K81AC hardware is the Wi-Fi elish SKU. The board configuration and component selection omit the enuma modem and baseband paths.", "The board's [components] list describes the Wi-Fi SKU. It sets the boot-menu theme in the [payload] table."]
+findings = ["The measured M2105K81AC hardware is the Wi-Fi elish SKU. The board configuration and component selection omit the enuma modem and baseband paths.", "The Setup Assistant component additions in board.toml are GopFramebuffer and AppleKeyStoreState. Neither selects a modem or baseband component."]
 completion = ["Not applicable to the Wi-Fi SKU."]
 limits = ["Cellular/baseband support is out of scope for this device repository."]
 next_action = ["None."]
@@ -286,7 +294,7 @@ paths = ["package/**", "dts/**", "proprietary-files.txt"]
 inputs = ["The stock SoC DTB contains Kona audio/DSP data; public elish DTS candidates include CS35L41 amplifiers. Active codecs and firmware remain to be confirmed against the selected overlay."]
 configuration = ["No audio or DSP component is selected in stage 1."]
 procedure = ["Inventory firmware and codec routes, then verify playback, capture, route changes and shutdown/restart behavior."]
-findings = ["The stage-1 DTS inherits stock-derived SoC audio declarations. No audio component is selected and codec operation is pending.", "The run56 UFS package addition reaches the System-root PID 1 checkpoint before audio service startup."]
+findings = ["The stage-1 DTS inherits stock-derived SoC audio declarations. No audio component is selected and codec operation is pending.", "The Setup Assistant boot adds GOP presentation. The board still selects no audio or DSP driver, and the Hello capture provides display evidence only."]
 completion = ["Each declared route handles the selected formats through playback or capture and stops cleanly."]
 limits = ["No audio/DSP operation has been tested on elish."]
 next_action = ["Resolve the active audio overlay and firmware dependencies after boot and storage basics."]
@@ -300,7 +308,7 @@ paths = ["package/**", "patches/xnu/**", "scripts/build-platform-power.py", "con
 inputs = ["A PMGR bridge and command-line setting exist in the draft, based on a same-family implementation; no elish power behavior has been verified."]
 configuration = ["CONFIG_XNU_SHENG_PMGR and the sheng-pmgr argument are stage-1 candidates and must be reviewed against the pinned profile and elish runtime."]
 procedure = ["Review the bridge and boot argument before an authorized boot; implement battery, charging, thermal and sleep behavior only from measured evidence."]
-findings = ["The stage-1 PMGR bridge provides lifecycle publication. Battery, charger, thermal and suspend control remain to be implemented.", "Run56 retains the PMGR bridge. The XNU diagnostic uses the firmware-prepared warm reset and returned to bootloader fastboot after showing the System-root PID 1 checkpoint."]
+findings = ["The stage-1 PMGR bridge provides lifecycle publication. Battery, charger, thermal and suspend control remain to be implemented.", "Run79 returned to bootloader fastboot through the diagnostic warm reset. Run80 retained the warm-reset option and omitted both timer arguments. The camera recorded Setup beyond run79's reset time. The board-specific arm64_platform_sleep_hook remains null."]
 completion = ["Battery/charging readings match observations and each claimed sleep/resume transition restores dependent peripherals."]
 limits = ["Battery, charging, thermal policy and sleep/resume are untested."]
 next_action = ["Review the inherited PMGR bridge and validate basic platform stability before adding power controls."]
@@ -318,6 +326,7 @@ findings = ["The published package workflow uses the pinned elish firmware and a
   "Run35 completed the board preflight, DEBUG FD build and Android boot-image packaging using the run28 payload.",
   "UNIXNU_ELISH_ROOT_IMAGE provides the pinned host userdata image. The build links the digest bundle's SHA-256 into XNU and passes the bundle to DarwinBoot with --root-policies. Run56 passed FAT readback and reached PID 1 from the unchanged SHNGROOT v1 layout.",
   "Local builds and package CI pin UniXNU at e7bddb9a7eecdcf81f36da9fa38bd9d4d3f155c2. The build support patch retains --root-policies alongside the upstream --boot-menu-theme option. The elish board selects oc-like by default. The Adreno 740 runtime and kernel ABI updates apply to boards that select that GPU stack.",
+  "Run79 built and checked the AppleKeyStoreState and 21H461 GOP archives. For the installed run80 image, FAT and Android v3 readback verified that the only payload file change was the boot argument list. The kernel, ADT, RootPolicies, trust cache and RAM Data seed were reused.",
 ]
 completion = ["Kernel/prelink and firmware build; payload/ADT are internally consistent; image format and size are accepted by the bootloader in an authorized test."]
 limits = ["Run56 proves one exact RAM-only boot image through the full System root and PID 1. The generic prelink qualification and host-generated hardware_tested fields do not record that device result. The new core pin needs a separate firmware build and device boot."]
@@ -348,6 +357,7 @@ findings = ["A successful warm reset followed by fastboot continue and root ADB 
   "After manual re-entry into bootloader, run65 passed all identity checks, booted from RAM and returned to verified fastboot about 253 seconds after Booting OKAY. Segment 024 captures the diagnostic with unreadable counters.",
   "Run66 returned to verified bootloader fastboot after 253 seconds. The repositioned camera captured the Apple logo, launchd, backboardd and SpringBoard readings. The upper GOP rows were outside the frame.",
   "Run79 first stalled in fastboot Sending with the device still enumerated. The retry revalidated all four identity fields and succeeded. It captured Hello on video and returned to verified bootloader fastboot after 382.55 seconds. See reports/elish-run79-key-store-20261126.md.",
+  "Run80's installed image and original boot_b backup each matched an independent full LUN read. Recovery rebooted normally and the camera captured the Hello screen through the previous reset window. See reports/elish-run80-installed-hello-20261126.md.",
 ]
 completion = ["Every claimed milestone has a reproducible command, matching source/image revision and accessible result."]
 limits = ["Run79 confirms the original Hello screen. The terminal snapshot counters could not be read from the camera. Setup completion and persistent Data are untested. Production prelink qualification flags remain false."]

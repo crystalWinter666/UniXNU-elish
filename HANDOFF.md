@@ -1,5 +1,11 @@
 # UniXNU elish UEFI 移植交接
 
+## 最新交接 · run80 · 2026-11-26
+
+- 活动槽 `boot_b` 已安装 run80，平板经 Recovery 的 `adb -s 4bed07e4 reboot` 正常启动到原版 Hello。约 457 秒的录像仍显示问候语。[内屏照片](reports/elish-run80-installed-hello-20261126.jpg)
+- 写入并读回核验了 UFS LUN 4 LBA `393654–442805`。分区和整盘读回 SHA-256 均为 `d4dceb7aa1ec16a51e828ca6c983efe513fba1e1e152808545f55f09da505b2c`。原槽备份、相邻块和 GPT 校验见 [run80 报告](reports/elish-run80-installed-hello-20261126.md)。
+- run80 复用 run79 的内核、ADT、RootPolicies、信任缓存和 RAM Data seed，移除了终止快照和定时重启参数。触控、语言选择、Setup 完成、SpringBoard 主屏幕和 Data 持久化仍待验证。
+
 ## 最新交接 · run79 · 2026-11-26
 
 - **原版 Hello 已验收。** `run79-key-store/boot.img` SHA-256 `15d21e8dc7c1e902e2aba21792c1bd938cab457db640c34fcc26e0e09fa23b7d`。`device-attempt.89vwTy/camera-035.mkv` 约 4 秒处可见英文 Hello 和 `Swipe up to open`，下一段拍到问候语切换。约 382.55 秒后回到已核验身份的 bootloader fastboot。镜像、录像、构建指令与源码版本见 [run79 报告](reports/elish-run79-key-store-20261126.md)；[Hello 照片](reports/elish-run79-hello-20261126.jpg)。

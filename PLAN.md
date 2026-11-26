@@ -1,5 +1,11 @@
 # 小米平板 5 Pro（elish）iPadOS 17 移植计划
 
+## 已验收 · run80 · 2026-11-26
+
+从已安装的 UFS `boot_b` 正常启动到原版 iPadOS 17.7.11（`21H461`）Hello。约 457 秒的录像仍拍到问候语，超过 run79 的 382.55 秒重启时间。本轮保留可写 RAM Data。[实机记录](reports/elish-run80-installed-hello-20261126.md) · [内屏照片](reports/elish-run80-installed-hello-20261126.jpg)
+
+下一步用物理上滑验证触控和语言选择。Setup 完成、SpringBoard 主屏幕及 Data 跨重启持久化仍未验收。
+
 ## 已验收 · run79 · 2026-11-26
 
 小米平板 5 Pro Wi-Fi（`M2105K81AC`）通过 RAM-only 启动，在内屏显示原版 iPadOS 17.7.11（`21H461`）Setup Assistant 的 Hello 欢迎页和 `Swipe up to open`。约 350 秒拍到英文 Hello，随后记录到问候语切换。约 382.55 秒返回已核验的 bootloader fastboot。[照片](reports/elish-run79-hello-20261126.jpg) · [构建和实机记录](reports/elish-run79-key-store-20261126.md)

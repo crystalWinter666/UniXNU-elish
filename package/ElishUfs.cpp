@@ -25,6 +25,13 @@
 #endif
 
 extern "C" struct msgbuf *msgbufp;
+extern "C" void elish_snapshot_processes(int sample[10], char *springboard, char *chronod, size_t stackSize);
+extern "C" void elish_format_user_breakpoint(char *out, size_t size);
+extern "C" void elish_key_store_start();
+extern "C" void elish_key_store_snapshot(char *out, size_t size);
+#if ELISH_LEGACY_DISPLAY
+extern "C" void elish_snapshot_display(unsigned values[8]);
+#endif
 
 namespace {
 // elish stock DT and run40. Firmware owns link, PHY, clocks, power and SMMU.
@@ -170,6 +177,8 @@ OSSharedPtr<IOMemoryMap> logMapping, imemMapping, powerMapping;
 uintptr_t logBase, imemBase, powerBase;
 unsigned resetReady, resetting;
 bool launchdCheckpoint;
+unsigned launchdReachedMain, dataMountConfirmed;
+char dataMountDevice[64], dataMountUuid[37];
 char matchedRootDevice[32], matchedRootUuid[37];
 
 struct ConsoleRing {
@@ -258,6 +267,37 @@ void resetDeadline(thread_call_param_t, thread_call_param_t)
     resetToFastboot("RAM-only deadline reached", false);
 }
 
+void userspaceSnapshot(thread_call_param_t, thread_call_param_t)
+{
+    int sample[10] = {};
+    char springboard[400] = "absent";
+    char chronod[400] = "absent";
+    char breakpoint[112] = "BRK not sampled";
+    char keyStore[72];
+    elish_snapshot_processes(sample, springboard, chronod, sizeof(springboard));
+    elish_format_user_breakpoint(breakpoint, sizeof(breakpoint));
+    elish_key_store_snapshot(keyStore, sizeof(keyStore));
+    const bool data = __atomic_load_n(&dataMountConfirmed, __ATOMIC_ACQUIRE);
+    const unsigned main = __atomic_load_n(&launchdReachedMain, __ATOMIC_ACQUIRE);
+#if ELISH_LEGACY_DISPLAY
+    unsigned display[8];
+    elish_snapshot_display(display);
+    // Start below the panel area clipped by the diagnostic camera.
+    panic("\n\n\n\n\n\n\n\n"
+          "Data %d Launchd %d Main %u Setup %d\n"
+          "Copies %u Ends %u Rejects %u\n"
+          "backboardd %d lsd %d pkd %d\nLiveActivities pid %d exits %d status %x\n%s\n%s\nSpringBoard %d %s\nchronod %d %s",
+          data, sample[0], main, sample[3], display[2], display[4], display[6],
+          sample[1], sample[5], sample[7], sample[4], sample[8], static_cast<unsigned>(sample[9]),
+          keyStore, breakpoint, sample[2], springboard, sample[6], chronod);
+#else
+    panic("elish userspace snapshot\nData APFS rw=%d %s\n%s\nlaunchd=%d main=%u\nSetup=%d\nbackboardd %d lsd %d pkd %d\nLiveActivities pid %d exits %d status %x\n%s\n%s\nSpringBoard %d %s\nchronod %d %s",
+          data, data ? dataMountDevice : "unconfirmed", data ? dataMountUuid : "",
+          sample[0], main, sample[3], sample[1], sample[5], sample[7],
+          sample[4], sample[8], static_cast<unsigned>(sample[9]), keyStore, breakpoint, sample[2], springboard, sample[6], chronod);
+#endif
+}
+
 bool armRamOnlyReset(unsigned seconds)
 {
     logBase = map(0xb0000000, kRamoopsBytes, logMapping);
@@ -274,6 +314,15 @@ bool armRamOnlyReset(unsigned seconds)
     uint64_t deadline;
     clock_interval_to_deadline(seconds, NSEC_PER_SEC, &deadline);
     thread_call_enter_delayed(call, deadline);
+    unsigned snapshot = 0;
+    if (PE_parse_boot_argn("elish-userspace-snapshot", &snapshot, sizeof(snapshot)) && snapshot) {
+        if (snapshot >= seconds) panic("elish snapshot must precede RAM-only deadline");
+        const auto sample = thread_call_allocate_with_options(userspaceSnapshot, nullptr,
+                                                               THREAD_CALL_PRIORITY_KERNEL, 0);
+        if (!sample) panic("elish userspace snapshot setup failed");
+        clock_interval_to_deadline(snapshot, NSEC_PER_SEC, &deadline);
+        thread_call_enter_delayed(sample, deadline);
+    }
     return true;
 }
 
@@ -709,6 +758,8 @@ bool matchesReadOnlyApfs(mount_t mount, const char *uuid, char *device, size_t s
 
 extern "C" void elish_report_launchd(vnode_t root, const char *process)
 {
+    const bool launchd = strcmp(process, "launchd") == 0;
+    if (launchd) __atomic_store_n(&launchdReachedMain, 1, __ATOMIC_RELEASE);
     if (!launchdCheckpoint) return;
     mount_t upper = vnode_mount(root);
     vnode_t covered = (vfs_flags(upper) & MNT_UNION) ? vfs_vnodecovered(upper) : nullptr;
@@ -719,10 +770,18 @@ extern "C" void elish_report_launchd(vnode_t root, const char *process)
         strcasecmp(matchedRootUuid, kSystemUuid) == 0;
     if (covered) vnode_put(covered);
     const bool cache = matchesReadOnlyApfs(upper, kSystemOSUuid, cacheDevice, sizeof(cacheDevice));
-    const bool confirmed = system && cache && strcmp(process, "launchd") == 0;
+    const bool confirmed = system && cache && launchd;
     panic("elish System root %s\nAPFS UUID=%s\nSystem=%s verified=%d\nSystemOS=%s verified=%d\nPID 1 main: %s",
           confirmed ? "confirmed" : "checkpoint mismatch", matchedRootUuid,
           systemDevice, system, cacheDevice, cache, process);
+}
+
+extern "C" void elish_report_data_mount(const char *device, const char *uuid)
+{
+    strlcpy(dataMountDevice, device, sizeof(dataMountDevice));
+    strlcpy(dataMountUuid, uuid, sizeof(dataMountUuid));
+    __atomic_store_n(&dataMountConfirmed, 1, __ATOMIC_RELEASE);
+    elish_key_store_start();
 }
 
 extern "C" int elish_system_root_authorized(dev_t device)
@@ -736,6 +795,21 @@ extern "C" int native_verified_block_root_authorized(dev_t device)
 {
     return device != NODEV && (verifiedVolume(kSystemUuid, device, nullptr, 0) == device ||
                               verifiedVolume(kSystemOSUuid, device, nullptr, 0) == device);
+}
+
+extern "C" int native_verified_block_manifest_sha384(dev_t device, const char *uuid, uint8_t digest[48])
+{
+    if (!digest) return 0;
+    bzero(digest, SHA384_DIGEST_LENGTH);
+#if ELISH_VERIFIED_ROOT
+    if (!uuid || device == NODEV || verifiedVolume(uuid, device, nullptr, 0) != device) return 0;
+    // The archive generates these digests from the same pinned windows as RootPolicies.
+    const auto *manifest = strcasecmp(uuid, kSystemUuid) == 0 ? kOsManifestSha384 : kSystemOsManifestSha384;
+    memcpy(digest, manifest, SHA384_DIGEST_LENGTH);
+    return 1;
+#else
+    return 0;
+#endif
 }
 
 extern "C" int native_verified_block_volume_device(const char *uuid, dev_t *device, char *path, size_t size)
@@ -894,7 +968,7 @@ bool ElishUfsProbe::start(IOService *provider)
     launchdCheckpoint = publish && PE_parse_boot_argn("elish-launchd-checkpoint", &checkpoint, sizeof(checkpoint)) && checkpoint == 1;
     unsigned seconds = 0;
     if (PE_parse_boot_argn("elish-ram-only", &seconds, sizeof(seconds)) &&
-        (!seconds || seconds > 300 || !armRamOnlyReset(seconds))) panic("elish RAM-only reset setup failed");
+        (!seconds || seconds > 600 || !armRamOnlyReset(seconds))) panic("elish RAM-only reset setup failed");
     if (diagnostic) runProbe();
     if (dataProbe) runDataProbe(dataBlocks);
     if (const char *stage = prepareRoot()) {

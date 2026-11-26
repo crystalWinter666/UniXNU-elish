@@ -60,7 +60,116 @@ diff --git a/iokit/bsddev/IOKitBSDInit.cpp b/iokit/bsddev/IOKitBSDInit.cpp
 diff --git a/bsd/kern/kern_exit.c b/bsd/kern/kern_exit.c
 --- a/bsd/kern/kern_exit.c
 +++ b/bsd/kern/kern_exit.c
-@@ -1341,7 +1341,12 @@
+@@ -1335,6 +1335,108 @@
+ 
+ static int initproc_spawned = 0;
+ 
++static unsigned elish_liveactivities_exits;
++static unsigned elish_liveactivities_status;
++static unsigned elish_liveactivities_breakpoint_state;
++static struct {
++	uint64_t pc, lr;
++	unsigned pid, slide, comment;
++} elish_liveactivities_breakpoint;
++
++void
++elish_record_user_breakpoint(uint64_t pc, uint64_t lr, unsigned slide, unsigned comment)
++{
++	proc_t p = current_proc();
++	if (p == PROC_NULL || strcmp(proc_best_name(p), "liveactivitiesd") != 0 ||
++	    !os_atomic_cmpxchg(&elish_liveactivities_breakpoint_state, 0, 1, relaxed)) {
++		return;
++	}
++	elish_liveactivities_breakpoint.pc = pc;
++	elish_liveactivities_breakpoint.lr = lr;
++	elish_liveactivities_breakpoint.pid = proc_getpid(p);
++	elish_liveactivities_breakpoint.slide = slide;
++	elish_liveactivities_breakpoint.comment = comment;
++	os_atomic_store(&elish_liveactivities_breakpoint_state, 2, release);
++}
++
++void
++elish_format_user_breakpoint(char *out, size_t size)
++{
++	if (os_atomic_load(&elish_liveactivities_breakpoint_state, acquire) == 2) {
++		snprintf(out, size, "BRK %x pid %u slide %x\nPC %llx LR %llx",
++		    elish_liveactivities_breakpoint.comment, elish_liveactivities_breakpoint.pid,
++		    elish_liveactivities_breakpoint.slide, (unsigned long long)elish_liveactivities_breakpoint.pc, (unsigned long long)elish_liveactivities_breakpoint.lr);
++	}
++}
++
++struct elish_userspace_sample {
++	int pids[8];
++	char *springboard_stack;
++	char *chronod_stack;
++	size_t stack_size;
++};
++
++extern void elish_snapshot_user_threads(task_t, char *, size_t, unsigned, unsigned);
++extern int elish_format_workqueue(proc_t, char *, size_t);
++
++static int
++elish_snapshot_process(proc_t p, void *context)
++{
++	struct elish_userspace_sample *sample = context;
++	const char *name = proc_best_name(p);
++	int slot;
++	if (proc_getpid(p) == 1 && strcmp(name, "launchd") == 0) {
++		slot = 0;
++	} else if (strcmp(name, "backboardd") == 0) {
++		slot = 1;
++	} else if (strcmp(name, "SpringBoard") == 0) {
++		slot = 2;
++	} else if (strcmp(name, "Setup") == 0) {
++		slot = 3;
++	} else if (strcmp(name, "liveactivitiesd") == 0) {
++		slot = 4;
++	} else if (strcmp(name, "chronod") == 0) {
++		slot = 6;
++	} else if (strcmp(name, "pkd") == 0) {
++		slot = 7;
++	} else if (strcmp(name, "lsd") == 0) {
++		kauth_cred_t cred = kauth_cred_proc_ref(p);
++		if (!IS_VALID_CRED(cred)) {
++			return PROC_RETURNED;
++		}
++		const uid_t uid = kauth_cred_getuid(cred);
++		kauth_cred_unref(&cred);
++		if (uid != 501) {
++			return PROC_RETURNED;
++		}
++		slot = 5;
++	} else {
++		return PROC_RETURNED;
++	}
++	sample->pids[slot] = proc_getpid(p);
++	if (slot == 2) {
++		elish_snapshot_user_threads(proc_task(p), sample->springboard_stack, sample->stack_size, 14, 1);
++	} else if (slot == 6) {
++		char *stack = sample->chronod_stack;
++		const size_t size = sample->stack_size;
++		const int used = elish_format_workqueue(p, stack, size);
++		if (used >= 0 && (size_t)used < size) {
++			elish_snapshot_user_threads(proc_task(p), stack + used, size - used, 22, 1);
++		}
++	}
++	return PROC_RETURNED;
++}
++
++void
++elish_snapshot_processes(int pids[10], char *springboard, char *chronod, size_t stack_size)
++{
++	struct elish_userspace_sample sample = { .springboard_stack = springboard, .chronod_stack = chronod, .stack_size = stack_size };
++	proc_iterate(PROC_ALLPROCLIST | PROC_NOWAITTRANS, elish_snapshot_process, &sample, NULL, NULL);
++	memcpy(pids, sample.pids, sizeof(sample.pids));
++	pids[8] = os_atomic_load(&elish_liveactivities_exits, acquire);
++	pids[9] = os_atomic_load(&elish_liveactivities_status, relaxed);
++}
++
+ static int
+ sysctl_initproc_spawned(struct sysctl_oid *oidp, __unused void *arg1, __unused int arg2, struct sysctl_req *req)
+ {
+@@ -1341,7 +1443,12 @@
  		// Can only ever be set by launchd, and only once at boot
  		return EPERM;
  	}
@@ -74,6 +183,145 @@ diff --git a/bsd/kern/kern_exit.c b/bsd/kern/kern_exit.c
  }
  
  SYSCTL_PROC(_kern, OID_AUTO, initproc_spawned,
+@@ -2202,6 +2309,10 @@
+ 	proc_unlock(p);
+ 	pid = proc_getpid(p);
+ 	exitval = p->p_xstat;
++	if (strcmp(proc_best_name(p), "liveactivitiesd") == 0) {
++		os_atomic_store(&elish_liveactivities_status, (unsigned)exitval, relaxed);
++		os_atomic_inc(&elish_liveactivities_exits, release);
++	}
+ 	KERNEL_DEBUG_CONSTANT_IST(KDEBUG_COMMON,
+ 	    BSDDBG_CODE(DBG_BSD_PROC, BSD_PROC_EXIT) | DBG_FUNC_START,
+ 	    pid, exitval, 0, 0, 0);
+diff --git a/osfmk/arm64/sleh.c b/osfmk/arm64/sleh.c
+--- a/osfmk/arm64/sleh.c
++++ b/osfmk/arm64/sleh.c
+@@ -1238,6 +1238,12 @@ handle_breakpoint(arm_saved_state_t *state, uint32_t esr __unused)
+ 	}
+ #endif /* __has_feature(ptrauth_calls) */
+ 
++	if (ESR_EC(esr) == ESR_EC_BRK_AARCH64) {
++		extern void elish_record_user_breakpoint(uint64_t, uint64_t, unsigned, unsigned);
++		elish_record_user_breakpoint(get_saved_state_pc(state), get_saved_state_lr(state),
++		    current_task()->task_shared_region_slide, ISS_BRK_COMMENT(esr));
++	}
++
+ 	codes[1] = get_saved_state_pc(state);
+ 	exception_triage(exception, codes, numcodes);
+ 	__builtin_unreachable();
+diff --git a/bsd/pthread/pthread_workqueue.c b/bsd/pthread/pthread_workqueue.c
+--- a/bsd/pthread/pthread_workqueue.c
++++ b/bsd/pthread/pthread_workqueue.c
+@@ -4691,6 +4691,27 @@
+ }
+ 
+ #pragma mark misc
+ 
++int
++elish_format_workqueue(proc_t p, char *out, size_t size)
++{
++	struct workqueue *wq = proc_get_wqptr(p);
++	if (wq == NULL) {
++		return snprintf(out, size, "WQ absent\n");
++	}
++	if (!workq_lock_try(wq)) {
++		return snprintf(out, size, "WQ busy\n");
++	}
++	const unsigned threads = wq->wq_nthreads;
++	const unsigned idle = wq->wq_thidlecount;
++	const unsigned pending = wq->wq_reqcount;
++	const unsigned fulfilled = wq->wq_fulfilled;
++	const unsigned flags = _wq_flags(wq);
++	const unsigned creator = wq->wq_creator != NULL;
++	workq_unlock(wq);
++	return snprintf(out, size, "WQ total %u idle %u req %u done %u F%x C%u\n",
++	    threads, idle, pending, fulfilled, flags, creator);
++}
++
+ int
+ fill_procworkqueue(proc_t p, struct proc_workqueueinfo * pwqinfo)
+diff --git a/osfmk/kern/task.c b/osfmk/kern/task.c
+--- a/osfmk/kern/task.c
++++ b/osfmk/kern/task.c
+@@ -111,5 +111,6 @@
+ #include <kern/task.h>
+ #include <kern/thread.h>
++#include <kern/backtrace.h>
+ #include <kern/coalition.h>
+ #include <kern/zalloc.h>
+ #include <kern/kalloc.h>
+@@ -173,4 +174,5 @@
+ #include <mach/task_server.h>
+ #include <mach/mach_host_server.h>
+ #include <mach/mach_port_server.h>
++#include <mach/thread_act_server.h>
+ 
+@@ -7860,6 +7862,64 @@
+ }
+ #endif /* __has_feature(ptrauth_calls) */
+ 
++static size_t
++elish_format_thread(thread_t thread, char *out, size_t out_size, unsigned frame_limit)
++{
++	uintptr_t frames[24];
++	struct backtrace_user_info info = BTUINFO_INIT;
++	unsigned count = 0;
++	const kern_return_t status = thread_suspend(thread);
++	if (status == KERN_SUCCESS) {
++		const struct backtrace_control ctl = { .btc_user_thread = thread };
++		count = backtrace_user(frames, MIN(frame_limit, sizeof(frames) / sizeof(frames[0])), &ctl, &info);
++		thread_resume(thread);
++	}
++	int used = snprintf(out, out_size, "\nT%llu K%u E%u", thread_tid(thread), status, info.btui_error);
++	for (unsigned i = 0; i < count && used >= 0 && (size_t)used < out_size; i++) {
++		const int n = snprintf(out + used, out_size - (size_t)used, "%s%lx",
++		    i % 3 == 0 ? "\n" : " ", (unsigned long)frames[i]);
++		if (n < 0) break;
++		used += n;
++	}
++	return used < 0 ? 0 : (size_t)used;
++}
++
++/* Terminal sample of threads outside the workqueue's parked wait. */
++void
++elish_snapshot_user_threads(task_t task, char *out, size_t out_size, unsigned frame_limit, unsigned thread_limit)
++{
++	thread_t selected[3];
++	thread_t thread;
++	unsigned count = 0;
++	unsigned active = 0;
++
++	task_lock(task);
++	queue_iterate(&task->threads, thread, thread_t, task_threads) {
++		spl_t s = splsched();
++		thread_lock(thread);
++		const bool parked = (thread->state & TH_WAIT) && thread->block_hint == kThreadWaitParkedWorkQueue;
++		thread_unlock(thread);
++		splx(s);
++		if (!parked) {
++			active++;
++			if (count < MIN(thread_limit, sizeof(selected) / sizeof(selected[0]))) {
++				thread_reference(thread);
++				selected[count++] = thread;
++			}
++		}
++	}
++	const uint32_t slide = task->task_shared_region_slide;
++	task_unlock(task);
++	int header = snprintf(out, out_size, "Slide %x active %u", slide, active);
++	size_t used = header < 0 ? out_size : (size_t)header;
++	for (unsigned i = 0; i < count; i++) {
++		if (used < out_size) {
++			used += elish_format_thread(selected[i], out + used, out_size - used, frame_limit);
++		}
++		thread_deallocate(selected[i]);
++	}
++}
++
+ /*
+  * This routine finds a thread in a task by its unique id
+  * Returns a referenced thread or THREAD_NULL if the thread was not found
 diff --git a/bsd/kern/bsd_init.c b/bsd/kern/bsd_init.c
 --- a/bsd/kern/bsd_init.c
 +++ b/bsd/kern/bsd_init.c
@@ -126,3 +374,20 @@ diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
 +	}
  	return error;
  }
+@@ -7256,6 +7269,16 @@ native_owner_data_prepare(proc_t p, user_addr_t scratch)
+ done:
+ 	if (data_root) vnode_put(data_root);
+ 	native_owner_data_status = error;
++	if (error) {
++		panic("elish Data mount: errno=%d stage=%d\nexpected=%s\nactual dev=%#x readonly=%d",
++		    error, native_owner_data_stage, device_path, native_owner_data_device,
++		    native_owner_data_readonly);
++	}
++	printf("ELISH_XNU: /private/var APFS rw %s dev=%#x UUID=%s\n",
++	    device_path, native_owner_data_device, XNU_OWNER_DATA_VOLUME_UUID);
++	extern void elish_report_data_mount(const char *, const char *);
++	elish_report_data_mount(device_path, XNU_OWNER_DATA_VOLUME_UUID);
++
+ 	return error;
+ }
+ #endif

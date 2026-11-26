@@ -43,16 +43,19 @@ archives = [
   "component:ArmCpu",
   "component:SoftwareAES",
   "build-software-aes-bindings.py",
+  "component:AppleKeyStoreState",
   "build-elish-ufs.py",
   "bind-elish-ram-block.py",
   "build-mockfs-fixture.py",
   "build-libpthread-kernel.py",
   "build-link-stubs.py",
   "build-platform-power.py",
+  "build-elish-legacy-display.py",
 ]
 
 [kernel.embedded_components]
 RamBlock = "bind-elish-ram-block.py"
+GopFramebuffer = "build-elish-legacy-display.py"
 
 [firmware]
 # The elish package host-builds; runtime memory-map ownership remains unverified.
@@ -106,7 +109,7 @@ include_dirs = ["soc:dts"]
 dtb = "../device-tree/hardware.dtb"
 
 [components]
-include = ["ArmDTPlatform", "ArmCpu", "SoftwareAES", "RamBlock", "XnuPrelink", "DarwinBoot"]
+include = ["ArmDTPlatform", "ArmCpu", "SoftwareAES", "RamBlock", "GopFramebuffer", "XnuPrelink", "DarwinBoot", "AppleKeyStoreState"]
 
 [payload]
 volume = "ELISHESP"
@@ -164,6 +167,8 @@ vmm-present = 1
 [adt.chosen.u32]
 # SM8250 没有 CTRR，内核文本对硬件仍可写（iBoot 在 Apple SoC 上写这个）。
 kernel-ctrr-to-be-enabled = 0
+# The 1600x2560 panel exposes an 800x1280-point logical display.
+display-scale = 2
 
 [adt.buttons]
 

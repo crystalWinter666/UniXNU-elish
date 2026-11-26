@@ -2,7 +2,7 @@
 
 An experimental iPadOS 17.7.11 (`21H461`) port for `elish` (`M2105K81AC`, Snapdragon 870). This repository provides the board configuration, device tree, XNU patches and image packaging. [UEFI firmware source](https://github.com/crystalWinter666/uefi-elish)
 
-On elish, RAM-only run56 mounted the full 21H461 System APFS root and SystemOS from UFS and confirmed Apple `launchd` reaching `main()` as PID 1. Setup and persistent Data remain untested. [Run56 device evidence](reports/elish-run56-verified-systemos-union-20261126.md)
+Run79 reached the original iPadOS 17.7.11 Setup Assistant Hello screen on the elish internal panel, using the read-only UFS System and SystemOS volumes, writable RAM Data and the GOP CPU-copy presenter. Touch, language selection, Setup completion, the home screen and persistent Data remain unverified. [Hello photo](reports/elish-run79-hello-20261126.jpg) · [Run79 build and device evidence](reports/elish-run79-key-store-20261126.md)
 
 ## Build
 

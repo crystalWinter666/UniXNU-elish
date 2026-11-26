@@ -5,6 +5,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 import struct
 import subprocess
 import sys
@@ -21,12 +22,15 @@ MANIFEST_SHA256 = 'bc908a6cf66491055077798550660f40128bfe6dce2fdc0db56e6af965112
 def build_root_digests(image, out):
     """Anchor read-time digests to the exact raw windows of the pinned IPSW."""
     tables = []
+    manifest_digests = []
     with image.open('rb') as stream:
         header = stream.read(4096)
         if hashlib.sha256(header).hexdigest() != MANIFEST_SHA256:
             raise SystemExit(f'{image}: SHNGROOT manifest does not match the 21H461 layout')
         for index, window in enumerate(('OS', 'SystemOS')):
-            name, offset, size, block, flags, digest = struct.unpack_from('<32sQQII32s', header, 24 + 128 * index)
+            entry_start = 24 + 128 * index
+            entry = header[entry_start:entry_start + 128]
+            name, offset, size, block, flags, digest = struct.unpack_from('<32sQQII32s', entry)
             if name.rstrip(b'\0').decode() != window or block != 512 or flags != 1:
                 raise SystemExit(f'{image}: unexpected {window} manifest entry')
             stream.seek(offset)
@@ -42,6 +46,7 @@ def build_root_digests(image, out):
             if image_digest.digest() != digest:
                 raise SystemExit(f'{image}: {window} contents do not match the pinned SHA-256')
             tables.append(chunks)
+            manifest_digests.append(hashlib.sha384(b'SHNGROOT.v1\0' + entry).digest())
             print(f'{window}: {len(chunks) // 32} chunks at {offset:#x}, {size} bytes, '
                   f'SHA-256 {digest.hex()}, table SHA-256 {hashlib.sha256(chunks).hexdigest()}', flush=True)
     # VROOTB01 transport envelope. The linked SHA-256 authenticates the complete
@@ -52,9 +57,12 @@ def build_root_digests(image, out):
                          first, len(tables[0]), second, len(tables[1])) + b''.join(tables)
     (out / 'elish-root-digests.bin').write_bytes(bundle)
     digest = hashlib.sha256(bundle).digest()
+    constants = {'kRootDigestsSha256': digest,
+                 'kOsManifestSha384': manifest_digests[0], 'kSystemOsManifestSha384': manifest_digests[1]}
     (out / 'elish-root-digests.h').write_text(
-        f'constexpr size_t kVerifiedChunk = {CHUNK_BYTES};\n'
-        'constexpr uint8_t kRootDigestsSha256[] = {' + ', '.join(f'{byte:#04x}' for byte in digest) + '};\n')
+        f'constexpr size_t kVerifiedChunk = {CHUNK_BYTES};\n' + ''.join(
+            f'constexpr uint8_t {name}[] = {{' + ', '.join(f'{byte:#04x}' for byte in value) + '};\n'
+            for name, value in constants.items()))
     print(f'RootPolicies: {len(bundle)} bytes, SHA-256 {digest.hex()}', flush=True)
 
 
@@ -90,11 +98,27 @@ def main():
                     '-I', str(ROOT / '.cache/xnu-work/osfmk'), '-I', str(ROOT / 'build/storage-abi/include')])
     if root:
         command.extend(['-DELISH_VERIFIED_ROOT=1', '-iquote', str(out)])
+    if os.environ.get('XNU_NATIVE_LEGACY_DISPLAY') == '1':
+        command.append('-DELISH_LEGACY_DISPLAY=1')
     subprocess.run(command, cwd=record['directory'], check=True)
     check_object(obj.read_bytes(), 'ElishUfs')
+    key_store = source.with_name('KeyStoreProbe.cpp')
+    key_probe = out / 'KeyStoreProbe.o'
+    subprocess.run([str(key_store) if arg == str(source) else str(key_probe) if arg == str(obj) else arg
+                    for arg in command], cwd=record['directory'], check=True)
+    check_object(key_probe.read_bytes(), 'KeyStoreProbe')
+    key_events = ROOT / 'build/apple-key-store-state/NativeKeyStoreEvents.o'
+    late_events = out / 'NativeKeyStoreEvents.late.o'
+    objcopy = shutil.which('llvm-objcopy')
+    if not objcopy:
+        objcopy = subprocess.check_output(['xcrun', '--find', 'llvm-objcopy'], text=True).strip()
+    subprocess.run([objcopy, '--remove-section=__DATA,__mod_init_func',
+                    '--globalize-symbol=__GLOBAL__sub_I_NativeKeyStoreEvents.cpp',
+                    key_events, late_events], check=True)
+    check_object(late_events.read_bytes(), 'NativeKeyStoreEvents.late')
     archive = out / 'libElishUfs.a'
     archive.unlink(missing_ok=True)
-    subprocess.run(['xcrun', 'ar', 'rcs', archive, obj], check=True)
+    subprocess.run(['xcrun', 'ar', 'rcs', archive, obj, key_probe, late_events], check=True)
 
 
 if __name__ == '__main__':

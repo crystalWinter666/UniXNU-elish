@@ -1,5 +1,84 @@
 # UniXNU elish UEFI 移植交接
 
+## 最新交接 · run79 · 2026-11-26
+
+- **原版 Hello 已验收。** `run79-key-store/boot.img` SHA-256 `15d21e8dc7c1e902e2aba21792c1bd938cab457db640c34fcc26e0e09fa23b7d`。`device-attempt.89vwTy/camera-035.mkv` 约 4 秒处可见英文 Hello 和 `Swipe up to open`，下一段拍到问候语切换。约 382.55 秒后回到已核验身份的 bootloader fastboot。镜像、录像、构建指令与源码版本见 [run79 报告](reports/elish-run79-key-store-20261126.md)；[Hello 照片](reports/elish-run79-hello-20261126.jpg)。
+- run79 复用 run56 的只读 UFS System、SystemOS、RootPolicies 与 Apple trust cache，以及 run76 的未配置 RAM Data seed（UUID `7D443C28-95AC-49F8-AF25-4FC12FBC93E5`）。`elish-aks=1` 在可写 Data 挂载后发布 `AppleKeyStoreState`。这轮录像未读出终止快照的键存储计数和 PID。
+- 下一轮可用独立目录复制 run79 并只改启动参数，移除 `elish-userspace-snapshot=360`，把 `elish-ram-only` 延长到足够取证的有限时间。保留 warm reset 和其余输入。先复现 Hello，再拍摄真机上滑到语言选择的可见响应。触控、语言选择、Setup 完成、SpringBoard 主屏幕和 Data 持久化仍未验证。
+- 每次上机核对 `18d1:d00d`、`4bed07e4`、`product=elish`、`is-userspace=no`。只用 `fastboot boot`，禁止 `fastboot continue`。run79 首次传输卡在 `Sending`，USB 枚举不代表可响应命令，须重新通过全部身份检查。Data 窗口未经写入授权。[备份与恢复预检](reports/elish-run54-ufs-data-readonly-20261126.md#backup-and-rollback-preflight)
+
+## 最新交接 · run78 · 2026-11-26
+
+- `run78-session-breakpoint/boot.img` SHA-256 `6d5edad9d82b89c633b46cd47d28b8a78149e7dfd1552ac602dbb8b3b4b19ccf`。160 秒采样捕获 `SessionSyncEngine` 内的 `BRK #1`，紧随 `MKBEventsRegister` 返回空句柄。`Setup=0`，约 183 秒回到已核对身份的 bootloader fastboot。run79 复用 MatePad 11 采用的 AppleKeyStoreState。[实机记录](reports/elish-run64-run65-gop-20261126.md#run78)
+
+## 最新交接 · run77 · 2026-11-26
+
+- `run77-session-daemon/boot.img` SHA-256 `960a69a946b9a2566ecb2c3f2ea2f50daa8127de11e003e873d7a8288e3d995e`。`chronod` 等待 ActivityKit 同步调用，`liveactivitiesd` 已退出 15 次，末次状态 `0x5`，`Setup=0`。约 383 秒回到已核对身份的 bootloader fastboot。[实机记录](reports/elish-run64-run65-gop-20261126.md#run77)
+
+## 最新交接 · run75 / run76 · 2026-11-26
+
+- `run75-chronod/boot.img` SHA-256 `d4c25473abdbeedd06aa090971fb888d0e4acb8dc0ff0d3e996a36a1548e87b9`。`chronod` PID 98 有同步 XPC 等待的线程，workqueue 待处理请求为 0。`pkd` PID 384，`Setup=0`。约 383 秒回到已核对身份的 bootloader fastboot。[实机记录](reports/elish-run64-run65-gop-20261126.md#run75)
+- `run76-mobile-tmp/boot.img` SHA-256 `caa454b9869b6f04fd450d466b68fc6f61b207fb244dfb221af02119cc5f4c48`。只读重挂载核对 RAM Data 的 `mobile/tmp` 属主已改为 `501:501`。360 秒时内屏显示苹果标志，`Setup=0`，随后回到已核对身份的 bootloader fastboot。[实机记录](reports/elish-run64-run65-gop-20261126.md#run76)
+
+## 最新交接 · run74 · 2026-11-26
+
+- `run74-springboard-deep-stack/boot.img` SHA-256 `99f00245102b7b84c9455913cbd20b58a7a93efcc0fe7efc871aff63241056b2`。360 秒的 SpringBoard 深栈定位到 `SBHIconManager` 初始化时同步订阅 ChronoServices 扩展。内屏保持苹果标志，`Setup=0`，约 383 秒后返回已核对身份的 bootloader fastboot。下一轮采样提供该服务的 `chronod`，并记录 `pkd` PID。Hello、主屏幕、触控、Setup 完成和 Data 持久化待验收。[实机记录](reports/elish-run64-run65-gop-20261126.md#run74)
+
+## 最新交接 · run73 · 2026-11-26
+
+- `run73-springboard-stack/boot.img` SHA-256 `b7ef0044def312d25656d9b638cf2829364d45e3fab51ff68ca70b86c93c4b63`。采样确认 `launchd`、`backboardd`、SpringBoard、可写 RAM Data，及 6 次 GOP 交换完成。SpringBoard 在 BoardServices 同步 XPC 调用中等待。相机拍到苹果标志和诊断，约 383 秒后返回 bootloader fastboot。Hello、主屏幕、触控、Setup 完成和 Data 持久化待验收。[实机记录](reports/elish-run64-run65-gop-20261126.md#run73)
+
+## 最新交接 · run72 · 2026-11-26
+
+- `run72-workqueue-admission/boot.img` SHA-256 `21f4e946a6b6b3d41afe589b2313f20a533154a0853a48392287312ff8f8ffee`。FAT payload 读回确认八个 CPU 节点的 E/P 类型。mobile `lsd` 的待处理请求为 0，快照确认 `launchd`、`backboardd`、SpringBoard 和可写 RAM Data。录像记录苹果标志和诊断，约 383 秒返回已核对身份的 bootloader fastboot。Hello、主屏幕、触控、Setup 完成和 Data 持久化仍待验收。[实机记录](reports/elish-run64-run65-gop-20261126.md#run72)
+
+## 最新交接 · run71 · 2026-11-26
+
+- `run71-lsd-workqueue/boot.img` SHA-256 `37892cb8971345c4618f2bdaac5da3c386fabc4f8677dad24a01dd2bbe34bc18`。mobile `lsd` 的 workqueue 快照显示 `total 1 idle 1 req 5 done 15 F10 C0`。内屏没有出现要求验收的界面，设备约 292 秒后回到 bootloader fastboot。run72 的 SoC 本地覆盖补齐八个 CPU 的 E/P 分类。[实机记录](reports/elish-run64-run65-gop-20261126.md#run71)
+
+## 最新交接 · run70 · 2026-11-26
+
+- `run70-preferences-wait/boot.img` SHA-256 `1931f57170b688a8f82f085480278a60d4c29040291885183e1ad6e08a7d6135`。mobile `lsd` PID 123 的唯一非空闲 workqueue 样本停在 `_LSPreferences` 同步等待。内屏显示苹果标志和诊断，设备约 292 秒后自动返回 bootloader fastboot。Setup 界面、触控和 Data 持久化待验收。[实机记录](reports/elish-run64-run65-gop-20261126.md#run70)
+
+## 最新交接 · run69 · 2026-11-26
+
+- `run69-launchservices/boot.img` SHA-256 `43f174a6cfd93d18e2ee94b1bc852e69d9542a7f49ffc517b08f3129774168ba`。270 秒诊断拍到 `lsd` 在 `_LSPreferences::with` 的同步队列等待。内屏在诊断前显示苹果标志，随后约 293 秒返回 bootloader fastboot。Setup、触控和 Data 持久化待验收。[实机记录](reports/elish-run64-run65-gop-20261126.md#run69)
+
+## 最新交接 · run68 · 2026-11-26
+
+- `run68-userspace-stacks/boot.img` SHA-256 `e3f3fc67400e9933b26a8675b23d9c4e9945447d0186bff5ae7e716f8d4048c2`。录像记录苹果标志和 270 秒诊断。SpringBoard 等待 LaunchServices 存储，backboardd 初始线程已进入 `CFRunLoop`，采样时没有 Setup 进程。设备约 293 秒后回到 bootloader fastboot。[快照和栈解析](reports/elish-run64-run65-gop-20261126.md#run68)
+
+## 最新交接 · run67 · 2026-11-26
+
+- `run67-longer-ui-window/boot.img` SHA-256 `962ac89be5f5d53822515f756e924399a990d9d11278dbbdb03510ce527fe944`。诊断记录 GOP 4 次拷贝、4 次交换完成、0 次拒绝。苹果标志保留到诊断，采样时没有 Setup 进程。原生 UI、触控、Setup 完成和 Data 持久化待验收。[快照和录像位置](reports/elish-run64-run65-gop-20261126.md#run67)
+
+## 最新交接 · run66 · 2026-11-26
+
+- `run66-gop-copies/boot.img` SHA-256 `052c02930c6fb782d1471b1b9ef879bf7aea5a5fe1a1e674fbe6f8e87b484215`。启动约 191 秒的录像拍到苹果标志。后续诊断记录 `launchd=1 main=1`、`backboardd=57`、`SpringBoard=26`、`Setup=0`。GOP 计数在画幅外，约 253 秒返回已核对身份的 bootloader fastboot。run67 将诊断下移并延长观察窗口。[照片和录像位置](reports/elish-run64-run65-gop-20261126.md#run66)
+
+## 最新交接 · run64 / run65 · 2026-11-26
+
+- `run64-gop-cpu/boot.img` SHA-256 `b3956b0d323285d846230fc710545b905a691fc5f6df249c97dcb7ecd576956c`。实机 185 秒快照显示 `launchd=1 main=1`、`backboardd=57`、`SpringBoard=27`、`Setup=0` 和 GOP `stage=10 opens=5`。设备在启动后 207.85 秒回到已核对身份的 bootloader fastboot。录像未见原生 UI，帧数在画幅外。
+- `run65-gop-counters/boot.img` SHA-256 `5f78b342a914a5193741dd189069926b1fec36dfd70bad3a495dee888d37709e`。手动重进 bootloader fastboot 后，四项身份核对通过，镜像成功在 RAM 启动，约 253 秒后回到 fastboot。`device-attempt.wJk4m6/camera-024.mkv` 拍到快照，但右侧出画且文字失焦，无法核对计数。下一轮分别记录 IOSurface 拷贝和黑场填充。[构建和实机记录](reports/elish-run64-run65-gop-20261126.md)
+
+## 最新交接 · run63 · 2026-11-26
+
+- `run63-graphics-console/boot.img` SHA-256 `810e53eceb4de2220ac93650edd289efc386784d84ae2d09bff346e0f599479d`。内核、ADT、信任缓存、RootPolicies 和 RAM seed 与 run62 一致。185 秒快照显示 APFS Data 可写、`launchd=1 main=1`、`backboardd=57`、`SpringBoard=0 Setup=0`。设备约 207.84 秒后返回已核对身份的 bootloader fastboot。[录像和构建记录](reports/elish-run63-backboardd-20261126.md)
+
+## 最新交接 · run61 / run62 · 2026-11-26
+
+- `run61-userspace-snapshot/boot.img` SHA-256 `7fbdb2cb35ea96c69456ad5734efa13d64053165b529ab074afa41ae1c7d62ef`。实机在 157.65 秒时重新枚举为 bootloader fastboot，录像止于 124.58 秒，最后显示 pre-MMU。该轮后续 RAM-only reader 枚举为 `18d1:d001`，ADB `unauthorized`，未取回 ramoops。
+- `run62-earlier-snapshot/boot.img` SHA-256 `80e7067f4069e92f103cb678cf333bd496e404292aa335e73bb7af78454686a7`。快照确认 `/private/var` 可写、`launchd=1 main=1`、`SpringBoard=26`，采样时 `backboardd=0 Setup=0`。设备约 117.49 秒后回到 bootloader。相机分段覆盖了快照及重启。内屏原生 UI、触控和 Data 持久化还未验收。[本轮报告](reports/elish-run62-data-springboard-20261126.md)
+
+## 最新交接 · run58 · 2026-11-26
+
+- `run58-writable-ram-data/boot.img` SHA-256 `4230b261d836393079f9585341435a9b421a785c6be3e4f9a0e3df1642938177`。保留 run56 的 Apple trust cache 和 RootPolicies，启用 owner boot manifest 和 1 GiB RAM Data。实机画面保留 pre-MMU 标记，约 257 秒后回到 bootloader fastboot。
+- run59 保留 seed 并换回 run56 内核，复现 `mount[3] exited`。run60 用 run58 内核去掉 seed。原始 Data seed、卷 UUID、运行命令和录像路径见[本轮报告](reports/elish-run58-writable-ram-data-20261126.md)。
+
+## 最新交接 · run57 · 2026-11-26
+
+- `run57-pid1-continues/boot.img` SHA-256 `3ea8adeec3d7a4b870851175cf925adc8bce5310bef241211cd70dca549d74a5`。沿用 run56 的启动文件，关闭 PID 1 终止检查点，保留 240 秒 RAM-only 定时返回。实机显示 `mount[3] exited` 后回到 bootloader fastboot。本轮没有 Data seed。[实机录像和构建输入](reports/elish-run57-pid1-continues-20261126.md)
+
 ## 最新交接 · run56 · 2026-11-26
 
 - `run56-verified-systemos-union/boot.img` SHA-256 `11919eb7908ddec029480e248851041cfe9dc148d8438a470e98eca0cd61466e`。实机确认完整 System 根卷 `/dev/disk3s1`，UUID `04769D26-2CA0-4825-B443-E2E5F88300F2`，SystemOS 只读 union `/dev/disk1s1`，以及 Apple `launchd` PID 1 `main()`。检查点热重启回 bootloader fastboot。[实机记录](reports/elish-run56-verified-systemos-union-20261126.md)

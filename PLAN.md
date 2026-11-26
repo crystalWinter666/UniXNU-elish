@@ -1,5 +1,79 @@
 # 小米平板 5 Pro（elish）iPadOS 17 移植计划
 
+## 已验收 · run79 · 2026-11-26
+
+小米平板 5 Pro Wi-Fi（`M2105K81AC`）通过 RAM-only 启动，在内屏显示原版 iPadOS 17.7.11（`21H461`）Setup Assistant 的 Hello 欢迎页和 `Swipe up to open`。约 350 秒拍到英文 Hello，随后记录到问候语切换。约 382.55 秒返回已核验的 bootloader fastboot。[照片](reports/elish-run79-hello-20261126.jpg) · [构建和实机记录](reports/elish-run79-key-store-20261126.md)
+
+下一轮以 run79 为对照，仅调整诊断停机窗口，为物理上滑和语言选择留出时间。触控、语言选择、Setup 完成、SpringBoard 主屏幕和 Data 跨重启持久化均未验收。继续使用 RAM Data。
+
+## 当前检查点 · run78 · 2026-11-26
+
+`liveactivitiesd` 在 `MKBEventsRegister` 返回空句柄时触发 `BRK #1`。同版 SM8250 MatePad 11 已使用共享 `AppleKeyStoreState` 到达锁屏，SM8250 小米 10 已到达 Hello。run79 复用该组件并在可写 RAM Data 挂载后发布服务。[实机记录](reports/elish-run64-run65-gop-20261126.md#run78)
+
+## 当前检查点 · run77 · 2026-11-26
+
+`chronod` 的同步调用栈进入 ActivityKit。360 秒时 `liveactivitiesd` 已退出 15 次，末次状态 `0x5`。内屏此前仍显示苹果标志，采样时 `Setup=0`。run78 记录 `liveactivitiesd` 首次用户态 BRK 的地址和编号。[实机记录](reports/elish-run64-run65-gop-20261126.md#run77)
+
+## 当前检查点 · run75 / run76 · 2026-11-26
+
+run75 确认 `chronod` 和 `pkd` 均在运行，`chronod` 无待派发 workqueue 请求，有线程在同步等待 XPC。run76 将 RAM Data seed 中 `mobile/tmp` 的属主修正为 `501:501`，保留 APFS UUID 和 Setup 初始状态。360 秒时内屏仍显示苹果标志，两级同步 XPC 等待仍在，`Setup=0`。run77 采集 `chronod` 深栈与 `liveactivitiesd` 退出状态。[构建和实机记录](reports/elish-run64-run65-gop-20261126.md#run75)
+
+## 当前检查点 · run74 · 2026-11-26
+
+360 秒时，SpringBoard 在 `SBHIconManager` 初始化中调用 `subscribeToExtensionsIncludingIntents:completion:`，同步等待 ChronoServices。内屏保持苹果标志，诊断记录 6 次 GOP 交换完成，`Setup=0`。21H461 的 launchd 配置将 `com.apple.chronoservices` 注册给 `chronod`。run75 同时采样 SpringBoard、`chronod` 和 `pkd`。[实机记录](reports/elish-run64-run65-gop-20261126.md#run74)
+
+## 当前检查点 · run73 · 2026-11-26
+
+SpringBoard 的首个非空闲线程在 BoardServices 的同步 XPC 中等待回复。同次采样 mobile `lsd` 的待处理请求为 0，内屏停在苹果标志。run74 将 SpringBoard 栈扩大到 24 帧，定位调用方。[实机记录](reports/elish-run64-run65-gop-20261126.md#run73)
+
+## 当前检查点 · run72 · 2026-11-26
+
+补齐 `cluster-type` 后，360 秒快照显示 mobile `lsd` 的 workqueue 已处理 4,349 次请求，待处理数为 0。实机内屏显示苹果标志，诊断记录 6 次 GOP 拷贝和交换完成，`Setup=0`。run73 在同一采样时间补采 SpringBoard 的线程栈。[录像和构建记录](reports/elish-run64-run65-gop-20261126.md#run72)
+
+## 当前检查点 · run71 · 2026-11-26
+
+270 秒时，mobile `lsd` 的 XNU workqueue 有 5 个待处理请求和 1 个空闲 worker。延迟派发已排队。链接产物确认使用 EDGE 调度器，FAT 读回显示八个 CPU 节点均缺少 `cluster-type`。run72 在 SM8250 源码中补齐 A55/A77 的 E/P 类型，继续用 RAM Data 验证派发和界面。[快照和构建记录](reports/elish-run64-run65-gop-20261126.md#run71)
+
+## 当前检查点 · run70 · 2026-11-26
+
+270 秒采样确认 mobile `lsd` PID 123 在 `_LSPreferences` 同步队列上等待。采样时只有该线程未停在 workqueue 空闲等待里。system `lsd` 和 mobile `cfprefsd` 无匹配 PID，system `cfprefsd` 为 PID 90。内屏显示苹果标志和诊断，`Setup=0`。下一轮采集 mobile `lsd` 的 XNU workqueue 待处理请求数和线程状态。[录像和栈解析](reports/elish-run64-run65-gop-20261126.md#run70)
+
+## 当前检查点 · run69 · 2026-11-26
+
+`lsd` PID 118 在 `LSDatabaseBuilder` 初始化数据库时同步等待 `_LSPreferences` 队列。另一个采样线程停在 workqueue 入口。下一轮按 UID 区分两个 `lsd` 会话，采集非空闲线程及两种 `cfprefsd` 的 PID。[录像和栈解析](reports/elish-run64-run65-gop-20261126.md#run69)
+
+## 当前检查点 · run68 · 2026-11-26
+
+SpringBoard 的初始线程在 `CoreServices::_LSCopyServerStore` 等待 LaunchServices 同步回复。backboardd 的初始线程在 `CFRunLoop` 内等待。快照仍是 4 次交换完成、0 次拒绝和 `Setup=0`。run69 采样 `lsd` 的初始线程及累计 CPU 时间最多的其他线程。[录像和栈解析](reports/elish-run64-run65-gop-20261126.md#run68)
+
+## 当前检查点 · run67 · 2026-11-26
+
+450 秒快照记录 4 次 IOSurface 拷贝与交换完成，拒绝为 0。内屏在诊断前一直显示苹果标志，`SpringBoard=27`、`backboardd=57`、`Setup=0`。启动约 473 秒后回到 bootloader fastboot。下一轮采样 SpringBoard 和 backboardd 最早存活线程的用户栈。[录像和构建记录](reports/elish-run64-run65-gop-20261126.md#run67)
+
+## 当前检查点 · run66 · 2026-11-26
+
+实机内屏在启动约 191 秒时显示苹果标志，随后进入诊断。快照读到 `launchd=1 main=1`、`backboardd=57`、`SpringBoard=26` 和 `Setup=0`。GOP 计数超出画幅上缘，设备约 253 秒后回到 fastboot。run67 下移诊断并将采样延到 450 秒。原生 UI、触控、Setup 完成和 Data 持久化仍待验证。[录像和构建记录](reports/elish-run64-run65-gop-20261126.md#run66)
+
+## 当前检查点 · run64 / run65 · 2026-11-26
+
+run64 的 185 秒快照在同一时刻确认 `/private/var` 可写、`launchd=1 main=1`、`backboardd=57`、`SpringBoard=27`、`Setup=0` 和 GOP `stage=10 opens=5`。run65 在手动重新进入 bootloader fastboot 后启动成功，约 253 秒后返回 fastboot。录像拍到诊断快照，但右侧出画且文字失焦，无法核对计数。下一轮分别统计 IOSurface 拷贝和黑场填充，并先校准相机。原生 UI、触控、Setup 完成和 Data 持久化均待实机验证。[构建与录像记录](reports/elish-run64-run65-gop-20261126.md)
+
+## 当前检查点 · run63 · 2026-11-26
+
+去掉 `-v` 并把快照移到 185 秒后，实机确认 `/private/var` 可写、`launchd=1 main=1`、`backboardd=57`。采样时 `SpringBoard=0 Setup=0`。录像未见原生 UI，设备约 207.84 秒后返回 bootloader fastboot。下一轮用 GOP CPU 拷贝路径检查服务发布、用户态打开和实际出帧。[实机快照与构建记录](reports/elish-run63-backboardd-20261126.md)
+
+## 当前检查点 · run61 / run62 · 2026-11-26
+
+run62 复用 run61 的内核、ADT、RootPolicies、Apple trust cache 和 seed，将快照提前至 95 秒。实机确认 `/private/var` 为可写 APFS，`launchd=1 main=1`，`SpringBoard=26`，采样时 `backboardd=0 Setup=0`。原生 UI、触控、Setup 完成和 Data 持久化待验收。下一轮检查图形模式和 GOP 呈现路径。[实机快照与录像](reports/elish-run62-data-springboard-20261126.md)
+
+## 当前检查点 · run58 · 2026-11-26
+
+主机已生成并校验 21H461 的 1 GiB 可写 APFS Data seed，UUID 为 `7D443C28-95AC-49F8-AF25-4FC12FBC93E5`。实机续录第 220 秒仍显示 pre-MMU 标记，随后回到 bootloader fastboot。run59 保留 seed 并使用 run56 内核，复现 `mount[3] exited`。`/private/var` 挂载、Setup、触控和 Data 持久化均待实机验证。[构建、对照和照片](reports/elish-run58-writable-ram-data-20261126.md)
+
+## 当前检查点 · run57 · 2026-11-26
+
+关闭终止式 PID 1 检查点后，实机在约 83 秒显示 `mount[3] exited -- no exit reason available`，随后回到 bootloader fastboot。画面裁掉了退出状态。下一轮在同一只读 System/SystemOS 路径上加入 21H461 的 RAM Data seed，核对 `/private/var` 后继续追踪用户态。Setup、触控和持久化待测。[run57 实机记录](reports/elish-run57-pid1-continues-20261126.md)
+
 ## 当前检查点 · run56 · 2026-11-26
 
 实机从 UFS 挂载 21H461 完整 System APFS 根卷 `/dev/disk3s1`（`04769D26-2CA0-4825-B443-E2E5F88300F2`）和只读 SystemOS union `/dev/disk1s1`，确认 Apple `launchd` 以 PID 1 进入 `main()`。检查点显示结果后热重启回 bootloader fastboot。[run56 实机记录](reports/elish-run56-verified-systemos-union-20261126.md)

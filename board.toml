@@ -118,6 +118,7 @@ tools = true
 dram_size = "0x200000000"
 # Automatically start the only XNU entry after the UEFI menu countdown.
 timeout = 3
+boot_menu_theme = "oc-like"
 title = "elish：4 KiB XNU 到 panic 屏（阶段 1）"
 # DarwinBoot uses the live UEFI map to select usable memory and emits excluded ranges
 # for the XNU owner. The HOB screenshots are partial evidence, not the final UEFI map.

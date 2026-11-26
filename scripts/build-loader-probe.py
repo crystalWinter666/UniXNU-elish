@@ -33,6 +33,7 @@ def main():
     probe_mode.add_argument("--ufs-handoff-readonly", action="store_true", help="Preserve qualified UFS routes through SEC and sample them in DXE without issuing DMA")
     probe_mode.add_argument("--ufs-nop", action="store_true", help="Check the inherited UFS routes and submit one bounded no-data NOP before reboot")
     probe_mode.add_argument("--ufs-gpt", action="store_true", help="Run NOP, read LUN 0 capacity, and validate the known elish GPT blocks")
+    probe_mode.add_argument("--ufs-root-windows", action="store_true", help="Validate both elish GPT copies, then sample the manifest and OS/SystemOS LBAs without writing")
     probe_mode.add_argument("--ufs-run-kernel", action="store_true", help="Preserve qualified UFS routes and enter XNU without touching the inherited queues")
     probe_mode.add_argument("--pmsg-readback", action="store_true", help="Log pmsg memory and the post-MMU return marker before DarwinBoot")
     args = parser.parse_args()
@@ -60,12 +61,14 @@ def main():
         replacement += '\nELISH_LOADER_PROBE_RUN_KERNEL = "TRUE"'
     if args.ufs_clocks_readonly:
         replacement += '\nELISH_LOADER_PROBE_UFS_CLOCKS = "TRUE"'
-    if args.ufs_handoff_readonly or args.ufs_nop or args.ufs_gpt or args.ufs_run_kernel:
+    if args.ufs_handoff_readonly or args.ufs_nop or args.ufs_gpt or args.ufs_root_windows or args.ufs_run_kernel:
         replacement += '\nELISH_UFS_HANDOFF_PROBE = "TRUE"'
     if args.ufs_nop:
         replacement += '\nELISH_UFS_NOP_PROBE = "TRUE"'
-    if args.ufs_gpt:
+    if args.ufs_gpt or args.ufs_root_windows:
         replacement += '\nELISH_UFS_GPT_PROBE = "TRUE"'
+    if args.ufs_root_windows:
+        replacement += '\nELISH_UFS_ROOT_WINDOWS_PROBE = "1"'
     if args.smmu_readonly:
         replacement += '\nELISH_LOADER_PROBE_SMMU = "TRUE"'
     if args.pmsg_readback:
@@ -88,6 +91,8 @@ def main():
     probe_description = (
         "Capture inherited SMMUv2 stream mappings in SEC before PlatformInitialize; warm-restart without entering DXE"
         if args.sec_smmu_readonly else
+        "Validate native capacity and both GPTs, then read bounded userdata root-window samples before DarwinBoot"
+        if args.ufs_root_windows else
         "After bounded NOP, read LUN 0 capacity and validate the known elish primary and backup GPT"
         if args.ufs_gpt else
         "Qualify the inherited UFS routes, submit one bounded no-data NOP, and restart before DarwinBoot"

@@ -1,0 +1,128 @@
+diff --git a/iokit/KernelConfigTables.cpp b/iokit/KernelConfigTables.cpp
+--- a/iokit/KernelConfigTables.cpp
++++ b/iokit/KernelConfigTables.cpp
+@@ -87,15 +87,20 @@
+     "     'IOProbeScore'    = 1000:32;"
+     "   }"
+ #endif
+-#if defined(XNU_NATIVE_RAM_BLOCK) && XNU_NATIVE_RAM_BLOCK
+     "   ,{"
+     "     'IOClass'         = NativeRamBlock;"
+     "     'IOMatchCategory' = NativeRamBlock;"
+     "     'IOProviderClass' = IOResources;"
+     "     'IOResourceMatch' = IOBSD;"
+     "     'IOProbeScore'    = 1000:32;"
+     "   }"
+-#endif
++    "   ,{"
++    "     'IOClass'         = ElishUfsProbe;"
++    "     'IOMatchCategory' = ElishUfsProbe;"
++    "     'IOProviderClass' = IOResources;"
++    "     'IOResourceMatch' = IOBSD;"
++    "     'IOProbeScore'    = 1000:32;"
++    "   }"
+ #if defined(XNU_NATIVE_UFS) && XNU_NATIVE_UFS
+     "   ,{"
+     "     'IOClass'         = NativeUfs;"
+diff --git a/makedefs/MakeInc.kernel b/makedefs/MakeInc.kernel
+--- a/makedefs/MakeInc.kernel
++++ b/makedefs/MakeInc.kernel
+@@ -188,6 +188,9 @@
+ endif
+ 
+ # Explicit external source archives participate in incremental relinking.
+ $(TARGET)/$(KERNEL_FILE_NAME).unstripped.noctf: $(XNU_EXTERNAL_KERNEL_ARCHIVES)
++ELISH_LD_COMMA := ,
++ELISH_STORAGE_ARCHIVES := %/libElishUfs.a %/libRamBlock.a
++$(TARGET)/$(KERNEL_FILE_NAME).unstripped.noctf: $(filter $(ELISH_STORAGE_ARCHIVES),$(subst $(ELISH_LD_COMMA), ,$(LD_KERNEL_ARCHIVES)))
+ 
+ $(TARGET)/$(KERNEL_FILE_NAME).unstripped.noctf: $(addprefix $(TARGET)/,$(foreach component,$(COMPONENT_LIST),$(component)/$(CURRENT_KERNEL_CONFIG)/$(component).filelist)) lastkerneldataconst.o lastkernelconstructor.o nonlto.o version.o $(LDFILES_KERNEL_ONLY) .LDFLAGS $(filter %/MakeInc.kernel,$(MAKEFILE_LIST))
+diff --git a/iokit/bsddev/IOKitBSDInit.cpp b/iokit/bsddev/IOKitBSDInit.cpp
+--- a/iokit/bsddev/IOKitBSDInit.cpp
++++ b/iokit/bsddev/IOKitBSDInit.cpp
+@@ -65,6 +65,7 @@
+ extern void di_root_ramfile(IORegistryEntry * entry);
+ extern int IODTGetDefault(const char *key, void *infoAddr, unsigned int infoSize);
+ extern boolean_t cpuid_vmm_present(void);
++extern void elish_record_root_media(const char *, const char *);
+ 
+ #define ROUNDUP(a, b) (((a) + ((b) - 1)) & (~((b) - 1)))
+ 
+@@ -950,6 +951,8 @@
+ 		iostr = (OSString *) service->getProperty( kIOBSDNameKey );
+ 		if (iostr) {
+ 			strlcpy( rootName, iostr->getCStringNoCopy(), rootNameSize );
+ 		}
++		auto *volumeUUID = OSDynamicCast(OSString, service->getProperty("UUID"));
++		elish_record_root_media(iostr ? iostr->getCStringNoCopy() : "", volumeUUID ? volumeUUID->getCStringNoCopy() : "");
+ 		off = (OSNumber *) service->getProperty( kIOBSDMajorKey );
+ 		if (off) {
+diff --git a/bsd/kern/kern_exit.c b/bsd/kern/kern_exit.c
+--- a/bsd/kern/kern_exit.c
++++ b/bsd/kern/kern_exit.c
+@@ -1341,7 +1341,12 @@
+ 		// Can only ever be set by launchd, and only once at boot
+ 		return EPERM;
+ 	}
+-	return sysctl_handle_int(oidp, &initproc_spawned, 0, req);
++	int error = sysctl_handle_int(oidp, &initproc_spawned, 0, req);
++	if (error == 0 && req->newptr != 0 && initproc_spawned == 1 && rootvnode != NULL) {
++		extern void elish_report_launchd(vnode_t, const char *);
++		elish_report_launchd(rootvnode, proc_best_name(req->p));
++	}
++	return error;
+ }
+ 
+ SYSCTL_PROC(_kern, OID_AUTO, initproc_spawned,
+diff --git a/bsd/kern/bsd_init.c b/bsd/kern/bsd_init.c
+--- a/bsd/kern/bsd_init.c
++++ b/bsd/kern/bsd_init.c
+@@ -992,7 +992,7 @@
+ 			int owner_authorized = 0;
+ #if defined(XNU_OWNER_ROOT_AUDIT) && XNU_OWNER_ROOT_AUDIT
+ 			{
+-				extern int native_verified_block_root_authorized(dev_t);
++				extern int elish_system_root_authorized(dev_t);
+ 				extern volatile int native_owner_root_apple_autherr, native_owner_root_decision, native_owner_root_readonly;
+ 				extern volatile dev_t native_owner_root_mount_device, native_owner_root_selected_device;
+ 				extern void native_owner_root_checkpoint(int, int, dev_t);
+@@ -1000,7 +1000,8 @@
+ 				vnode_t device_vnode = vfs_devvp(root_mount);
+ 				dev_t device = device_vnode ? vnode_specrdev(device_vnode) : NODEV;
+ 				int readonly = (vfs_flags(root_mount) & MNT_RDONLY) != 0;
+-				int owner = readonly && device_vnode && native_verified_block_root_authorized(device);
++				int owner = readonly && device_vnode && device == rootdev &&
++				    !strcmp(vfs_statfs(root_mount)->f_fstypename, "apfs") && elish_system_root_authorized(device);
+ 				if (device_vnode) vnode_put(device_vnode);
+ 				native_owner_root_mount_device = device;
+ 				native_owner_root_selected_device = rootdev;
+diff --git a/bsd/kern/kern_exec.c b/bsd/kern/kern_exec.c
+--- a/bsd/kern/kern_exec.c
++++ b/bsd/kern/kern_exec.c
+@@ -7050,6 +7050,11 @@
+ static int
+ native_owner_cache_prepare(proc_t p, user_addr_t scratch, user_addr_t *envp)
+ {
++	unsigned elish_root = 0;
++	if (!PE_parse_boot_argn("elish-ufs-root", &elish_root, sizeof(elish_root)) || elish_root != 1) {
++		return 0;
++	}
++
+ #ifndef XNU_OWNER_CACHE_VOLUME_UUID
+ #define XNU_OWNER_CACHE_VOLUME_UUID "8846FE78-2910-4297-AF97-D59BB6F8FC16"
+ #endif
+@@ -7167,6 +7172,14 @@
+ #endif
+ 	native_owner_cache_authorized = cache_authorized;
+ 	native_owner_cache_status = error;
++	printf("ELISH_XNU: SystemOS UUID=%s stage=%d mount=%d authorized=%d error=%d\n",
++	    volume, native_owner_cache_stage, native_owner_cache_mount_status,
++	    cache_authorized, error);
+ 	native_owner_cache_checkpoint(error, cache_authorized);
++	if (error) {
++		panic("elish SystemOS mount failed: %d\nstage=%d mount=%d authorized=%d\ndevice=%s",
++		    error, native_owner_cache_stage, native_owner_cache_mount_status,
++		    cache_authorized, native_owner_cache_device_path);
++	}
+ 	return error;
+ }

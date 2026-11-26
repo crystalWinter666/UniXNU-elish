@@ -1,5 +1,67 @@
 # UniXNU elish UEFI 移植交接
 
+## 最新交接 · run56 · 2026-11-26
+
+- `run56-verified-systemos-union/boot.img` SHA-256 `11919eb7908ddec029480e248851041cfe9dc148d8438a470e98eca0cd61466e`。实机确认完整 System 根卷 `/dev/disk3s1`，UUID `04769D26-2CA0-4825-B443-E2E5F88300F2`，SystemOS 只读 union `/dev/disk1s1`，以及 Apple `launchd` PID 1 `main()`。检查点热重启回 bootloader fastboot。[实机记录](reports/elish-run56-verified-systemos-union-20261126.md)
+- Setup 未测试。当前主机没有目标 Data seed，标准生成工具需要 macOS `hdiutil`。Data 持久化未测试。空闲窗口备份和回滚尚未验证，尚无该范围的写入授权。[Data 窗口与恢复预检](reports/elish-run54-ufs-data-readonly-20261126.md#backup-and-rollback-preflight)
+
+## 最新交接 · run55 · 2026-11-26
+
+- `run55-verified-system-handoff/boot.img` SHA-256 `40a5b16c6b318abcaf2784aa8ba5f2d94e3fba26ed7872ac7d64fe4c60c0a755`。摘要包走 DarwinBoot `RootPolicies` 交接，XNU 验证后发布只读 OS/SystemOS。[run55](reports/elish-run55-verified-system-handoff-20261126.md)
+- RAM-only 录像在 84 秒显示 PID 1 的 dyld 加载失败，随后返回 bootloader fastboot。System UUID、两层 APFS mount、`launchd` `main()`、Setup 和 Data 持久化待验收。
+
+## Data 窗口准备 · run54 · 2026-11-26
+
+- `run54-ufs-data-readonly/boot.img` SHA-256 `b5e5c8df09ef6e5aa5093249bf5cbe9805d96f95d24131a6f920f9033d3d5be2`。实机从 XNU 读到 3 GiB Data 候选窗口首末块，CRC32 均为 `c71c0011`，报告 `stopped=1 faults-same=1`，随后回到 bootloader fastboot。[run54](reports/elish-run54-ufs-data-readonly-20261126.md)
+- Data 候选窗口备份长 3,221,327,872 字节。整段独立备份、主备 GPT 和相邻块保护值、恢复验证和写入授权均待补齐。[备份与恢复步骤](reports/elish-run54-ufs-data-readonly-20261126.md#backup-and-rollback-preflight)
+
+## 最新交接 · run53 · 2026-11-26
+
+- `run53-verified-system-layout/boot.img` SHA-256 `2771fd3ab994caa782a7e60f4fadd8502a13e3fde177181b83c3a515a4993cf5`。XNU 编译、预链接、双存储 ABI 和 FAT 检查通过。RAM-only 启动录像在 80 秒显示 pre-MMU 标记，之后返回 bootloader fastboot。[run53](reports/elish-run53-verified-system-layout-20261126.md)
+- PID 1 检查点会主动停止。RAM-only Setup 需允许 `launchd` 继续运行并提供逻辑容量不超过 2 GiB 的未配置 Data seed。Data 持久化还需要 elish 的 `native_ufs_store_*` 和经核验的可写窗口，目前两项均未测试。[验收条件](reports/elish-run53-verified-system-layout-20261126.md#hardware-acceptance)
+
+## 最新交接 · run52 · 2026-11-26
+
+- run52 的 UFS 校验镜像实机确认到 pre-MMU。`__TEXT` 中的摘要表改变了早期可执行段布局。run53 将摘要表移至 `__LASTDATA_CONST`。[run52](reports/elish-run52-verified-system-20261126.md)
+- 已从 `boot_b` 只读提取同哈希的 RAM-only Lineage reader，位于 `run52-verified-system/boot-b-reader-candidate.img`。启动 reader 后 ADB 显示 `4bed07e4 unauthorized`，未回收 ramoops。
+
+## 最新交接 · run51 · 2026-11-26
+
+- 已离线安装 21H461 前缀，LUN 0 LBA `6619136–8909823`。清缓存后从整盘读回匹配 SHA-256 `fd43ee7035ce185ce4215ac93fdc006fd784a54b3b7442e21457c226cbe03093`。主备 GPT 与 LBA `8909824` 对照通过。原始前缀的已验证恢复备份仍位于 `/root/elish-userdata-prefix-backup.MV0PYNbU/userdata-prefix.img`。
+- run51 重用 run50 启动镜像。实机到挂载后的 `FSIOC_KERNEL_ROOTAUTH`，屏幕记录 `rootvp not authenticated after mounting @bsd_init.c:1100`。平板约 20 秒后返回 fastboot，进入 Recovery 后 pstore 为空。实挂系统 UUID 和 Apple PID 1 待验收。[run51](reports/elish-run51-system-root-auth-20261126.md)
+- 在内核构建中设置 `UNIXNU_ELISH_ROOT_IMAGE` 为主机 `userdata-root.img` 的路径，生成绑定固定 IPSW 窗口内容的只读摘要表。诊断从 RAM-only 启动，在现有安装上继续读取。
+
+## 最新交接 · run50 · 2026-11-26
+
+- `/tmp/elish-run50-xnu-system-checkpoint-20261126/boot/boot.img` 的 SHA-256 为 `a97b762d32dc5da6fc55c325536432503ffa7967f647db7aff284dc448cbbedd`。实机只读检查在缺少 `SHNGROOT` 时停下，随后自动回到 fastboot。RAM-only reader 的 root ADB 取回 XNU ramoops。[run50](reports/elish-run50-xnu-system-checkpoint-20261126.md)
+- run48 的反汇编定位了复位指令截断。run49 修正后 PSCI 自动重启通过，pstore 为空。run50 使用固件已准备的热重启路径，验证日志保留。[run48](reports/elish-run48-xnu-psci-root-20261126.md) · [run49](reports/elish-run49-xnu-psci-asm-20261126.md)
+- 完整 System 根卷、Apple `launchd` PID 1、Setup 和 Data 持久化各自待验收。平板留在 `_b` 槽 Recovery。当前离线备份 `/root/elish-userdata-prefix-backup.MV0PYNbU/userdata-prefix.img` 的完整 SHA-256 与设备独立读回一致，主备 GPT 和范围后首块通过校验。首次安装和同范围回滚等待对 LUN 0 LBA `6619136–8909823` 的明确授权。[恢复方案](reports/elish-run50-xnu-system-checkpoint-20261126.md#offline-installation-and-rollback-preflight)
+
+## 最新交接 · run46 / run47 · 2026-11-26
+
+- run46 修正 UPIU LUN 和 Task Tag 偏移后，XNU 自有 DMA 通过容量与七块 CRC 检查。实机屏显示 `reads=7 stopped=1 faults-same=1`。[run46](reports/elish-run46-xnu-ufs-upiu-20261126.md)
+- run47 用 `elish-ufs-root=1 elish-ram-only=45` 启动，无 Restore ramdisk。ADT 选择 UUID `04769D26-2CA0-4825-B443-E2E5F88300F2`。屏幕确认两份 GPT 捕获块通过后，XNU 在缺少 `SHNGROOT` manifest 时停止，OS/SystemOS 发布与 APFS mount 待测。run47 未自动回到 fastboot。[run47](reports/elish-run47-xnu-ufs-root-20261126.md)
+- 目标镜像和已验证离线备份各为 9,382,658,048 字节。安装和回滚范围均为 LUN 0 LBA `6619136–8909823`。首次写入需用户明确授权，Recovery 下复核备份及两个 GPT 与范围后的首块。[恢复方案](reports/elish-run42-ufs-root-windows-20261126.md#offline-prefix-backup)
+
+## 最新交接 · run45 · 2026-11-26
+
+- RAM-only run45 核验 `4bed07e4`、`product=elish`、`is-userspace=no` 后进入 XNU，通过 SMMU 检查并接管空闲队列。终止屏显示 `READ CAPACITY(10)`、`reads=0 stopped=1 faults-same=1`。run45 将 Task Tag 写到了 LUN 字段，NOP 响应检查也用了错误字节。run46 修正字节 2/3，保留队列与故障守卫，并显示命令完成状态。[实机记录](reports/elish-run45-xnu-ufs-20261126.md)
+
+## 最新交接 · run44 · 2026-11-26
+
+- RAM-only run44 进入 XNU，屏幕定位首个不匹配寄存器 `0x15000000`。32 位 `sCR0` 实测 `0x00230406`、原期望 `0x00270406`。DMA 地址为 0。run43 的 Recovery ramoops 回收超时。run45 对 `MTCFG=0` 的两种实测值均执行后续路由和队列守卫，并对照七个已知 LBA 的 CRC。[run44 证据](reports/elish-run44-xnu-ufs-20261126.md)
+
+## 最新交接 · run43 · 2026-11-26
+
+- `/tmp/elish-run43-xnu-ufs-20261126/boot/boot.img` 的 SHA-256 为 `718bb8e187d3c3fd85823996165ce6dcd04c6b48af6a798756e90e29f9bff65a`。核验 `4bed07e4`、`product=elish`、bootloader fastboot 后 RAM-only 启动。照片确认 XNU 已进入 UFS 探针，在 SMMU 检查处停下，尚无 XNU UFS 命令。run44 细化寄存器诊断。[run43 记录](reports/elish-run43-xnu-ufs-20261126.md)
+- `userdata` 前缀备份位于 `/root/elish-userdata-prefix-backup.KGeZtgQ9/userdata-prefix.img`，完整哈希已从独立整盘读取复核。任何写入必须先获得对应 LBA `6619136–8909823` 的授权。完整 System 根卷、Setup 与 Data 持久化尚未验证。[恢复方案](reports/elish-run42-ufs-root-windows-20261126.md#offline-prefix-backup)
+
+## 最新交接 · run42 · 2026-11-26
+
+- `--ufs-root-windows` 从已验证的 LUN 0 GPT 出发读六个目标块。CRC32 与 Android `/dev/block/sda`、`/dev/block/sda34` 的双视图基线一致。设备上的 manifest、OS GPT、OS NXSB 和 SystemOS NXSB 签名均缺失。SystemOS 尾块吻合的内容为全零。
+- `/tmp/elish-run42-ufs-root-windows-rebuilt-20261126/boot.img` SHA-256 `5d0be74cc6744aa36543d782404a26f1deef6acf6f770404372b2f5b0aca8192`。两次 RAM boot 前均核验 USB bootloader fastboot、serial `4bed07e4`、`product=elish`。探针完成后队列停止并在 DarwinBoot 前热重启，已由 RAM reader 取回日志。[记录与恢复方案](reports/elish-run42-ufs-root-windows-20261126.md)
+- XNU DMA、完整 System 根卷、Setup 和 Data 持久化待实机确认。首轮镜像写入范围拟限制为 LUN 0 LBA `6619136–8909823`。需要先在 `/data` 未挂载的恢复环境完成该前缀的原始备份校验，再请求写入授权。
+
 ## 最新交接 · run40 · 2026-11-26
 
 - run40 在 RAM-only elish 启动中复核两条 UFS SMMU 路由，通过数据 PRD `0x9A71B000–0x9A720000` 读取原生 LUN 0。限时 NOP 成功，READ CAPACITY 返回 61,880,320 个 4 KiB 块；已知 LBA 1、主备 GPT 及 header/entries CRC 均通过，`userdata` LBA 边界与 Android 基线一致。

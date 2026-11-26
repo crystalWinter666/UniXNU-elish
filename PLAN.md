@@ -1,5 +1,68 @@
 # 小米平板 5 Pro（elish）iPadOS 17 移植计划
 
+## 当前检查点 · run56 · 2026-11-26
+
+实机从 UFS 挂载 21H461 完整 System APFS 根卷 `/dev/disk3s1`（`04769D26-2CA0-4825-B443-E2E5F88300F2`）和只读 SystemOS union `/dev/disk1s1`，确认 Apple `launchd` 以 PID 1 进入 `main()`。检查点显示结果后热重启回 bootloader fastboot。[run56 实机记录](reports/elish-run56-verified-systemos-union-20261126.md)
+
+- **Setup** 未测试。需要未配置的可写目标 Data seed，并关闭终止式 PID 1 检查点。
+- **Data 持久化** 未测试。候选窗口已读到首末块，整段备份、恢复预检和写入授权仍待完成。
+
+## 当前检查点 · run55 · 2026-11-26
+
+DarwinBoot 交接 OS/SystemOS 摘要包，XNU 验证后才发布只读 UFS 窗口。run55 的 84 秒录像显示 `initproc failed to start` 和 dyld 加载 `/usr/lib/libSystem…` 失败，设备随后自动返回 fastboot。目标 System UUID、SystemOS 挂载和 Apple `launchd` 的 `main()` 仍需屏幕证据。[run55 实机记录](reports/elish-run55-verified-system-handoff-20261126.md)
+
+## Data 窗口准备 · run54 · 2026-11-26
+
+run54 在 XNU 核验原生 LUN 容量、主备 GPT 和已安装根镜像布局后，读到候选 Data 窗口 LBA 60,821,714–61,608,170 的首末块，CRC32 均为 `c71c0011`。队列已停止，SMMU fault 状态未变，平板自动返回 bootloader fastboot。整段备份、独立读回和回滚验证待执行。[run54 实机记录](reports/elish-run54-ufs-data-readonly-20261126.md)
+
+## 当前检查点 · run53 · 2026-11-26
+
+摘要表移到 `__LASTDATA_CONST` 后，`__TEXT_EXEC` 的起点和大小恢复到 run51 的值。RAM-only 实机录像的最后确认点仍为 pre-MMU 紫色标记，随后返回 bootloader fastboot。[run53 实机记录](reports/elish-run53-verified-system-layout-20261126.md)
+
+System 根卷验收镜像在 PID 1 检查点主动停止，屏幕会同时记录根卷 UUID、APFS 挂载设备和 `launchd`。RAM-only Setup 验收需要未配置的可写 Data seed。Data 持久化须先验证 elish 专用写入窗口的完整备份和恢复方案，获准后再验证重启后的同卷标记。实机诊断通过 bootloader fastboot 与摄像头完成。
+
+## 当前检查点 · run52 · 2026-11-26
+
+run52 启动内核已经包含 OS 与 SystemOS 的校验表。相机拍到 pre-MMU 标记，之后平板回到 bootloader fastboot。RAM-only reader 的 USB ADB 未授权，本轮实机没有根卷认证结果。run52 将 `__TEXT_EXEC` 后移了 `0x8bc000`。run53 把摘要表移到 `__LASTDATA_CONST` 验证该布局变化。[run52 实机记录](reports/elish-run52-verified-system-20261126.md)
+
+## 当前检查点 · run51 · 2026-11-26
+
+离线安装后从分区节点及清缓存后的整盘 LUN 独立读回，完整哈希均匹配 `userdata-root.img`。主备 GPT 与范围外首块保持原值。run51 RAM-only 启动到 XNU 挂载后的根卷认证，屏幕显示 `rootvp not authenticated after mounting`，随后回到 fastboot。此轮未读出实挂 UUID，也未到 Apple PID 1。[run51 实机记录](reports/elish-run51-system-root-auth-20261126.md)
+
+新版 XNU 将两个只读 UFS 窗口的 32 KiB 分块 SHA-256 表编入启动内核，在提交给 APFS 前校验读取内容。BSD 原生认证继续执行，附加认证仅接受绑定到目标 UUID 和实际只读 APFS 挂载设备的 OS 窗口。下一轮从已安装窗口验证 SystemOS 挂载与 Apple `launchd`。Setup 和 Data 持久化待分别验收。
+
+## 当前检查点 · run50 · 2026-11-26
+
+run50 在现有 `userdata` 上复现缺少 `SHNGROOT` 的终止点，随后自动热重启回到 bootloader fastboot。RAM-only reader 取回 80,997 字节的 ramoops，确认 XNU 停止队列且 SMMU 故障状态未变。目标 APFS UUID、实际挂载设备及 Apple `launchd` PID 1 检查点已编入镜像，等待授权安装后验证。[run50 实机记录](reports/elish-run50-xnu-system-checkpoint-20261126.md)
+
+Recovery 已校验当前 `userdata` 前缀备份、主备 GPT 和边界后首块。保持 `/data` 离线，在前缀和边界校验仍匹配时沿用这份备份。安装及同范围回滚等待授权，范围为 LUN 0 LBA `6619136–8909823`。[写入前复核](reports/elish-run50-xnu-system-checkpoint-20261126.md#offline-installation-and-rollback-preflight)
+
+## 当前检查点 · run46 / run47 · 2026-11-26
+
+run46 的 XNU 独立 DMA 验证通过 NOP、READ CAPACITY(10) 和七个已知 4 KiB 块的 CRC32。run47 去掉 Restore ramdisk，使用目标 System UUID，并在实机通过两份 GPT 捕获块校验后读到 `userdata` 首块。缺少 `SHNGROOT` 时在发布块设备前停止，队列停止且 SMMU 故障状态未变。[run46](reports/elish-run46-xnu-ufs-upiu-20261126.md) · [run47](reports/elish-run47-xnu-ufs-root-20261126.md)
+
+下一项实机验收需安装完整镜像。范围为 LUN 0 的 LBA `6619136–8909823`，等待写入授权。允许写入后，先在 Recovery 复核离线前缀哈希和范围外守卫，再验证写入回读、OS/SystemOS 块设备、完整 System 根卷 UUID 与 Apple `launchd` PID 1。Setup 与 Data 持久化各自验收。[备份与恢复方案](reports/elish-run42-ufs-root-windows-20261126.md#offline-prefix-backup)
+
+## 当前检查点 · run45 · 2026-11-26
+
+XNU 已通过 SMMU/队列守卫，用自己分配的 DMA 页接管空闲队列。`READ CAPACITY(10)` 阶段停止，`reads=0 stopped=1 faults-same=1`。复核定位到 UPIU 字节偏移错误。run46 修正 Task Tag 和 LUN 字段，重新验证 NOP、容量与七个已知 LBA。[run45 记录](reports/elish-run45-xnu-ufs-20261126.md)
+
+## 当前检查点 · run44 · 2026-11-26
+
+实机 XNU 从 `0x15000000` 读取 `sCR0=0x00230406`，与 run40 相差 `MemAttr` 的 bit 18。两组值的 `MTCFG` 均为 0。下一轮允许该位差异，复核完整 SID/CB、故障寄存器及空闲队列，随后用 XNU 分配的页读取 LBA 1 和 run42 的六个 userdata 样本。[run44 记录](reports/elish-run44-xnu-ufs-20261126.md)
+
+## 当前检查点 · run43 · 2026-11-26
+
+RAM-only run43 已进入 XNU 的 `ElishUfsProbe::start`。屏幕显示 `SMMU routes or initial faults`，DMA 地址为 0。停止点在 DMA 分配和队列接管之前。run44 增加首个不匹配寄存器的地址、实测值和期望值。[run43 实机记录](reports/elish-run43-xnu-ufs-20261126.md)
+
+Recovery 中已验证 `userdata` 离线前缀备份，大小 9,382,658,048 字节。分区与整盘的完整读取哈希一致，备份前后两个 GPT 和范围后的首块一致。开始安装前须复核备份并取得该范围的写入授权。[备份与恢复方案](reports/elish-run42-ufs-root-windows-20261126.md#offline-prefix-backup)
+
+## 当前检查点 · run42 · 2026-11-26
+
+RAM-only run42 通过 run40 的原生 UFS 路径读取六个 `userdata` 目标 LBA。Android 的整盘与分区视图样本逐字节一致，UEFI 的六项 CRC32 全部相符。设备上的样本缺少 `SHNGROOT`、OS GPT 和两个 APFS 容器签名。探针在 DarwinBoot 前停止，队列已停，doorbell 为 0，SMMU fault 状态未变。完整 System 镜像仍在主机。[run42 记录与原始日志](reports/elish-run42-ufs-root-windows-20261126.md)
+
+先验证 XNU 在自己的 4 KiB 页面上完成 UFS DMA，然后发布只读 OS/SystemOS 窗口并核对目标 System UUID 与 Apple PID 1。Setup 和 Data 持久化单独记录。安装镜像前须在离线 `userdata` 上校验前缀备份与恢复路径，并取得指定范围的写入授权。
+
 ## 当前检查点 · run40 · 2026-11-26
 
 run40 通过 RAM-only `fastboot boot` 在 elish 上复核 run38 的 UFS SMMU 路由，提交限时 NOP、读取 LUN 0 容量和已知块，并用 DMA 读取主备 GPT。容量为 61,880,320 个 4 KiB 块；已知块、两份 GPT header/entries CRC 及 `userdata` 边界均匹配 Android 基线。DMA PRD 位于 `0x9A71B000–0x9A720000`，完成后队列停止且 SMMU fault 状态未变。[run40 实机记录](reports/elish-run40-ufs-gpt-20261126.md)

@@ -11,3 +11,4 @@
 # with boot_progress stages) and cannot apply until that block exists.
 sheng-platform-power.patch
 elish-memory-excluded-ranges.patch
+elish-ufs-probe.patch

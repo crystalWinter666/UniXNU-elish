@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: BSD-2-Clause-Patent
-"""Bind RamBlock to the 21H461 IOStorageFamily and check the final kernel."""
+"""Bind elish block devices to the 21H461 IOStorageFamily and check the final kernel."""
 import argparse
 import json
 import os
@@ -32,7 +32,7 @@ BASE = {
     '__ZN20IOBlockStorageDevice10gMetaClassE': 0xfffffff006add1d0,
     '__ZTV20IOBlockStorageDevice': TABLE,
 }
-CLASS_TABLE = '__ZTV14NativeRamBlock'
+BLOCK_CLASSES = {'14NativeRamBlock': OVERRIDES, '13ElishUfsBlock': OVERRIDES - {14, 87}}
 
 
 def symbols(data, image):
@@ -80,13 +80,11 @@ def compile_ram_block(out):
     return obj
 
 
-def bind():
-    out = ROOT / 'build/ram-block'
-    obj = compile_ram_block(out)
+def block_bindings(obj, class_name, overrides):
     data = obj.read_bytes()
     image = macho(data)
     entries = list(symbols(data, image))
-    table = next(value for name, _, value in entries if name == CLASS_TABLE)
+    table = next(value for name, _, value in entries if name == '__ZTV' + class_name)
     section = next(s for seg in image['segments'] for s in seg['sections']
                    if s['va'] <= table < s['va'] + s['size'])
     start, count = struct.unpack_from('<2I', data, section['command_offset'] + 56)
@@ -99,9 +97,9 @@ def bind():
     bindings = {name: BASE[name] for name in imported & BASE.keys()}
     for slot in range(SLOTS):
         name = relocations.get(table + 16 + 8 * slot, '')
-        overridden = name.startswith(('__ZN14NativeRamBlock', '__ZNK14NativeRamBlock'))
-        if overridden != (slot in OVERRIDES) or not name:
-            raise SystemExit(f'Unexpected NativeRamBlock vtable slot {slot}: {name}')
+        overridden = name.startswith(('__ZN' + class_name, '__ZNK' + class_name))
+        if overridden != (slot in overrides) or not name:
+            raise SystemExit(f'Unexpected {class_name} vtable slot {slot}: {name}')
         if overridden:
             continue
         if slot in METHODS:
@@ -112,7 +110,18 @@ def bind():
                                    ('15OSMetaClassBase', '8OSObject', '15IORegistryEntry', '9IOService')):
             raise SystemExit(f'Unexpected inherited vtable slot {slot}: {name}')
     if bindings.keys() != imported or table + 16 + 8 * SLOTS in relocations:
-        raise SystemExit('Unqualified NativeRamBlock imports or vtable size')
+        raise SystemExit(f'Unqualified {class_name} imports or vtable size')
+    return bindings
+
+
+def bind():
+    out = ROOT / 'build/ram-block'
+    obj = compile_ram_block(out)
+    bindings = block_bindings(obj, '14NativeRamBlock', BLOCK_CLASSES['14NativeRamBlock'])
+    for name, address in block_bindings(ROOT / 'build/elish-ufs/ElishUfs.o', '13ElishUfsBlock',
+                                        BLOCK_CLASSES['13ElishUfsBlock']).items():
+        if bindings.setdefault(name, address) != address:
+            raise SystemExit(f'Conflicting IOStorageFamily binding for {name}')
     asm = out / 'original-bindings.S'
     asm.write_text(''.join(f'.globl {name}\n.set {name}, {value:#x}\n' for name, value in sorted(bindings.items())))
     adapter = out / 'original-bindings.o'
@@ -142,14 +151,15 @@ def check(kernel):
     original = struct.unpack(f'<{SLOTS}Q', read(TABLE + 16, SLOTS * 8))
     if any(original[slot] != address for slot, address in METHODS.items()):
         raise SystemExit('IOBlockStorageDevice vtable differs from the 21H461 contract')
-    concrete = struct.unpack(f'<{SLOTS}Q', read(names[CLASS_TABLE] + 16, SLOTS * 8))
     native_text = next(s for s in image['segments'] if s['name'] == '__TEXT_EXEC')
-    owned = {i for i, address in enumerate(concrete) if address != original[i]}
-    if owned != OVERRIDES:
-        raise SystemExit(f'NativeRamBlock vtable differs at unexpected slots: {sorted(owned ^ OVERRIDES)}')
-    if any(not native_text['va'] <= concrete[i] < native_text['va'] + native_text['size'] for i in owned):
-        raise SystemExit('NativeRamBlock overrides must target native executable text')
-    print(f'RamBlock: {SLOTS} linked vtable slots checked, {len(owned)} native overrides')
+    for class_name, overrides in BLOCK_CLASSES.items():
+        concrete = struct.unpack(f'<{SLOTS}Q', read(names['__ZTV' + class_name] + 16, SLOTS * 8))
+        owned = {i for i, address in enumerate(concrete) if address != original[i]}
+        if owned != overrides:
+            raise SystemExit(f'{class_name} vtable differs at unexpected slots: {sorted(owned ^ overrides)}')
+        if any(not native_text['va'] <= concrete[i] < native_text['va'] + native_text['size'] for i in owned):
+            raise SystemExit(f'{class_name} overrides must target native executable text')
+        print(f'{class_name}: {SLOTS} linked vtable slots checked, {len(owned)} native overrides')
 
 
 if __name__ == '__main__':

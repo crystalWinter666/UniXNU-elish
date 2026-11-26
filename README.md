@@ -2,7 +2,7 @@
 
 An experimental iPadOS 17.7.11 (`21H461`) port for `elish` (`M2105K81AC`, Snapdragon 870). This repository provides the board configuration, device tree, XNU patches and image packaging. [UEFI firmware source](https://github.com/crystalWinter666/uefi-elish)
 
-On elish, the RAM-only run28 image boots the 21H461 Apple Restore APFS volume through RamBlock. The fourth framebuffer band confirms that Apple `launchd` reached `main()` as PID 1. Full System-root boot, Setup and persistent Data remain unverified. [Run28 evidence](reports/elish-restore-root-20261125.md) · [UFS handoff audit](reports/elish-ufs-reference-audit-20261125.md)
+On elish, RAM-only run56 mounted the full 21H461 System APFS root and SystemOS from UFS and confirmed Apple `launchd` reaching `main()` as PID 1. Setup and persistent Data remain untested. [Run56 device evidence](reports/elish-run56-verified-systemos-union-20261126.md)
 
 ## Build
 
@@ -20,3 +20,5 @@ cd UniXNU-elish
 ```
 
 The build support patch adds Android v3 kernel packaging without an appended DTB and describes the measured disjoint DRAM ranges in the ADT. The [porting record](porting.toml) and [handoff](HANDOFF.md) document device evidence and outstanding work.
+
+For System-root diagnostics, first build the host image with `../UniXNU/unixnu build userdata -D . --os ipados-17.7.11-21H461`. Refresh the active configuration with `../UniXNU/unixnu defconfig elish_defconfig -D . --os ipados-17.7.11-21H461`, then set `UNIXNU_ELISH_ROOT_IMAGE` to the resulting `userdata-root.img` when building the kernel. The archive recipe verifies both complete IPSW windows before generating `tree/build/elish-ufs/elish-root-digests.bin`. Pass that file to `unixnu build payload` with `--root-policies` and select `--kernel-arg elish-ufs-root=1`. XNU authenticates the handoff against the linked SHA-256 before publishing the UFS windows.

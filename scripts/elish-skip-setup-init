@@ -1,0 +1,23 @@
+#!/bin/busybox sh
+# SPDX-License-Identifier: BSD-2-Clause-Patent
+set -eu
+export PATH=/bin:/sbin PYTHONHOME=/usr
+exec >/dev/console 2>&1
+trap 'busybox dmesg | busybox tail -40; echo ELISH_SKIP_SETUP_FAILED; busybox poweroff -f' EXIT
+
+busybox mount -t proc proc /proc
+busybox mount -t devtmpfs devtmpfs /dev
+for module in virtio_blk crc32c_generic libcrc32c apfs; do
+    busybox insmod "/$module.ko"
+done
+busybox mount -t apfs -o rw,readwrite /dev/vda /data
+/usr/bin/python3.13 -S /elish-skip-setup.py /data write
+busybox sync
+busybox umount /data
+
+busybox mount -t apfs -o ro /dev/vda /data
+/usr/bin/python3.13 -S /elish-skip-setup.py /data verify
+busybox umount /data
+echo ELISH_SKIP_SETUP_VERIFIED
+trap - EXIT
+busybox poweroff -f

@@ -2,7 +2,7 @@
 
 An experimental iPadOS 17.7.11 (`21H461`) port for `elish` (`M2105K81AC`, Snapdragon 870). This repository provides the board configuration, device tree, XNU patches and image packaging. [UEFI firmware source](https://github.com/crystalWinter666/uefi-elish)
 
-Run80 booted from the installed UFS boot slot to the original iPadOS 17.7.11 Setup Assistant Hello screen on the elish internal panel. Run84's RAM-booted NT36523 candidate responded to a physical bottom-to-top swipe on Hello; ramoops counters confirmed GPIO, SPI-frame and HID reports. A language-selection tap, Setup completion, the home screen and persistent Data remain unverified. [Hello photo](reports/elish-run80-installed-hello-20261126.jpg) · [Run80 build and device evidence](reports/elish-run80-installed-hello-20261126.md) · [Run84 touch evidence](reports/elish-run81-touch-20261126.md#run84-physical-gesture-acceptance)
+Run85 booted from UFS `boot_b` past Setup Assistant to the iPadOS lock screen and SpringBoard home screen. Run84's RAM-booted NT36523 candidate responded to a physical bottom-to-top swipe on Hello with matching GPIO, SPI-frame and HID reports. Data uses a volatile APFS RAM seed. [Run85 Skip Setup build and boot](reports/elish-run85-skip-setup-20261127.md) · [Run84 touch evidence](reports/elish-run81-touch-20261126.md#run84-physical-gesture-acceptance)
 
 ## Build
 

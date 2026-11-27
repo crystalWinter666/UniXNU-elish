@@ -43,8 +43,13 @@ print(int(values[0]))
 ')
 identity
 usb_before=$(lsusb -d 18d1:d00d)
-ffmpeg -nostdin -hide_banner -loglevel warning -f v4l2 -input_format mjpeg \
-    -video_size 2592x1944 -framerate 30 -i "${ELISH_CAMERA:-/dev/video0}" -an -c:v copy \
+if [[ -n ${ELISH_CAMERA_STREAM_URL:-} ]]; then
+    camera_input=(-rw_timeout 5000000 -i "$ELISH_CAMERA_STREAM_URL")
+else
+    camera_input=(-f v4l2 -input_format mjpeg -video_size 2592x1944 -framerate 30
+        -i "${ELISH_CAMERA:-/dev/video0}")
+fi
+ffmpeg -nostdin -hide_banner -loglevel warning "${camera_input[@]}" -an -c:v copy \
     "$capture/camera.mkv" > "$capture/camera.log" 2>&1 &
 camera=$!
 trap finish EXIT

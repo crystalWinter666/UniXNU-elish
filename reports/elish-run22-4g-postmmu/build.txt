@@ -1,0 +1,51 @@
+{
+  "kernel": "/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run22-4g-postmmu/kernel.macho",
+  "stage": "after-mmu",
+  "site": "0xfffffff00741c370",
+  "cave": "0xfffffff00741a5c0",
+  "code_bytes": 404,
+  "before_sha256": "acb92e0807afc554567d99f0e0105cf8d15abb45ce108b064afdc7e64b79638b",
+  "after_sha256": "c517634022a99e8dd9b9fe39bc1b21bdb31a73192dbbda2cc674b038a301d554",
+  "message": "ELISH_XNU_CHECKPOINT: after-mmu; SCTLR.M=1; terminal probe reset\n",
+  "ramoops": "0xb0000000+0x200000",
+  "imem_restart_reason": "0x146bf65c",
+  "requires": "elish firmware RamLogReset prepared PON warm fastboot",
+  "terminal_probe": true,
+  "hardware_tested": false
+}
+{
+  "kernel": "/tmp/tmp.k8MbVTdXew/entry.macho",
+  "stage": "entry",
+  "site": "0xfffffff00741a488",
+  "cave": "0xfffffff00741a48c",
+  "code_bytes": 276,
+  "before_sha256": "acb92e0807afc554567d99f0e0105cf8d15abb45ce108b064afdc7e64b79638b",
+  "after_sha256": "2918ab9aee7fe6139afe3ca4b689d6d6a460f62baa680aacc473c2d268d4ed0a",
+  "message": "ELISH_XNU_CHECKPOINT: entry; SCTLR.M=0; terminal probe reset\n",
+  "ramoops": "0xb0000000+0x200000",
+  "imem_restart_reason": "0x146bf65c",
+  "requires": "elish firmware RamLogReset prepared PON warm fastboot",
+  "terminal_probe": true,
+  "hardware_tested": false
+}
+{
+  "kernel": "/tmp/tmp.k8MbVTdXew/before-mmu.macho",
+  "stage": "before-mmu",
+  "site": "0xfffffff00741c350",
+  "cave": "0xfffffff00741a48c",
+  "code_bytes": 276,
+  "before_sha256": "acb92e0807afc554567d99f0e0105cf8d15abb45ce108b064afdc7e64b79638b",
+  "after_sha256": "a0a3b3e56f885e1f56179a3b1f606f0b6a3def0be86a5a38b1a15ba04c96516e",
+  "message": "ELISH_XNU_CHECKPOINT: before-mmu; SCTLR.M=0; terminal probe reset\n",
+  "ramoops": "0xb0000000+0x200000",
+  "imem_restart_reason": "0x146bf65c",
+  "requires": "elish firmware RamLogReset prepared PON warm fastboot",
+  "terminal_probe": true,
+  "hardware_tested": false
+}
+Require one verified SCTLR/ISB/CPACR entry sequence
+unixnu: on Linux the kernel step uses the toolchain of scripts/linux/setup-toolchain.py; --skip-setup and seed-data-grow need macOS hdiutil
+== bootimg
+== bootimg: /root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run22-4g-postmmu/boot.img (67751936 bytes)
+d5a619151692f4cb4f8c08e6bfb57b7c757d7eb3a62c4c88fea07f784612ea9a  /root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run22-4g-postmmu/boot.img
+a3906eed306a8bbd42612a6ee759d9e8cd6b43c1ccb2e3f8ec4b1ba3a7f40007  /root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run22-4g-postmmu/payload.img

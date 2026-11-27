@@ -1,0 +1,68 @@
+{
+  "commands": [
+    [
+      "/root/elish-build-20261123/UniXNU/unixnu",
+      "build",
+      "firmware",
+      "-D",
+      "/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run10-smmu-maskfix/device",
+      "--os",
+      "ipados-17.7.11-21H461",
+      "--out",
+      "/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run10-smmu-maskfix/build",
+      "--uefi",
+      "/root/repo/uefi-elish",
+      "--edk2",
+      "/root/repo/uefi-elish/Mu_Basecore",
+      "--clang-bin",
+      "/usr/lib/llvm-21/bin",
+      "-j",
+      "8",
+      "--target",
+      "DEBUG"
+    ],
+    [
+      "/root/elish-build-20261123/UniXNU/unixnu",
+      "bootimg",
+      "-D",
+      "/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run10-smmu-maskfix/device",
+      "--os",
+      "ipados-17.7.11-21H461",
+      "--out",
+      "/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run10-smmu-maskfix/build",
+      "--uefi",
+      "/root/repo/uefi-elish",
+      "--edk2",
+      "/root/repo/uefi-elish/Mu_Basecore",
+      "--clang-bin",
+      "/usr/lib/llvm-21/bin",
+      "--fd",
+      "/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run10-smmu-maskfix/SILICIUM_UEFI.fd",
+      "--dtb",
+      "/tmp/elish-uefi-probe.dtb",
+      "--ramdisk",
+      "/root/elish-build-20261123/UniXNU/out/elish-resume/elish/ipados-17.7.11-21H461/elish/payload/payload.img",
+      "--output",
+      "/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run10-smmu-maskfix/boot.img"
+    ]
+  ],
+  "payload": {
+    "path": "/root/elish-build-20261123/UniXNU/out/elish-resume/elish/ipados-17.7.11-21H461/elish/payload/payload.img",
+    "sha256": "79ab59fda90509756a4b703295a5cc19c5b6932c6e66c2d25a5f864e983023ea"
+  },
+  "dtb": {
+    "path": "/tmp/elish-uefi-probe.dtb",
+    "sha256": "0fe90a0e1b8bd745d266c04111991c9e61ff3187fd8807b05928780626cdec48"
+  },
+  "probe": "Stop after successful ExitBootServices; XNU is not entered",
+  "outputs": {
+    "SILICIUM_UEFI.fd": {
+      "bytes": 3145728,
+      "sha256": "4f8043b1d51068d203a723bdcf9d1f3ac8f4904a7c171f8c4a00f647f83c345d"
+    },
+    "boot.img": {
+      "bytes": 67751936,
+      "sha256": "b805ed28f1849231d56c2692a4a9f848e2ae3545a4601aebd221f23e6f6cec33"
+    }
+  }
+}

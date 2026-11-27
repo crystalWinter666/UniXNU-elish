@@ -1,0 +1,68 @@
+{
+  "commands": [
+    [
+      "/root/elish-build-20261123/UniXNU/unixnu",
+      "build",
+      "firmware",
+      "-D",
+      "/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run29-ufs-clocks-readonly/device",
+      "--os",
+      "ipados-17.7.11-21H461",
+      "--out",
+      "/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run29-ufs-clocks-readonly/build",
+      "--uefi",
+      "/root/repo/uefi-elish",
+      "--edk2",
+      "/root/repo/uefi-elish/Mu_Basecore",
+      "--clang-bin",
+      "/usr/lib/llvm-21/bin",
+      "-j",
+      "8",
+      "--target",
+      "DEBUG"
+    ],
+    [
+      "/root/elish-build-20261123/UniXNU/unixnu",
+      "bootimg",
+      "-D",
+      "/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run29-ufs-clocks-readonly/device",
+      "--os",
+      "ipados-17.7.11-21H461",
+      "--out",
+      "/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run29-ufs-clocks-readonly/build",
+      "--uefi",
+      "/root/repo/uefi-elish",
+      "--edk2",
+      "/root/repo/uefi-elish/Mu_Basecore",
+      "--clang-bin",
+      "/usr/lib/llvm-21/bin",
+      "--fd",
+      "/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run29-ufs-clocks-readonly/SILICIUM_UEFI.fd",
+      "--dtb",
+      "/tmp/elish-uefi-probe.dtb",
+      "--ramdisk",
+      "/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run28-restore-launchd-cyan/payload.img",
+      "--output",
+      "/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run29-ufs-clocks-readonly/boot.img"
+    ]
+  ],
+  "payload": {
+    "path": "/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run28-restore-launchd-cyan/payload.img",
+    "sha256": "f06570608c20cca5a47c826b1f813ced5efe87d816b9b0429af68b22c2dc523f"
+  },
+  "dtb": {
+    "path": "/tmp/elish-uefi-probe.dtb",
+    "sha256": "0fe90a0e1b8bd745d266c04111991c9e61ff3187fd8807b05928780626cdec48"
+  },
+  "probe": "Validate mapped elish UFS/GCC windows, sample Kona clock registers read-only, and warm-restart before DarwinBoot",
+  "outputs": {
+    "SILICIUM_UEFI.fd": {
+      "bytes": 3145728,
+      "sha256": "7570c99f02291dd152b49eeb06b35ddcc281e9a35a70db5ddf4c52487e072baa"
+    },
+    "boot.img": {
+      "bytes": 235524096,
+      "sha256": "c745b50052edd4438f43754af8a3e2f21bbe4d49cca2bb80cfc0006d0104db78"
+    }
+  }
+}

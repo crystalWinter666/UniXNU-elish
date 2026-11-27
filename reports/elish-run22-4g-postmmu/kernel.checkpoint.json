@@ -1,0 +1,15 @@
+{
+  "kernel": "/root/elish-build-20261123/UniXNU/out/elish-darwinboot-20261125/run22-4g-postmmu/kernel.macho",
+  "stage": "after-mmu",
+  "site": "0xfffffff00741c370",
+  "cave": "0xfffffff00741a5c0",
+  "code_bytes": 404,
+  "before_sha256": "acb92e0807afc554567d99f0e0105cf8d15abb45ce108b064afdc7e64b79638b",
+  "after_sha256": "c517634022a99e8dd9b9fe39bc1b21bdb31a73192dbbda2cc674b038a301d554",
+  "message": "ELISH_XNU_CHECKPOINT: after-mmu; SCTLR.M=1; terminal probe reset\n",
+  "ramoops": "0xb0000000+0x200000",
+  "imem_restart_reason": "0x146bf65c",
+  "requires": "elish firmware RamLogReset prepared PON warm fastboot",
+  "terminal_probe": true,
+  "hardware_tested": false
+}

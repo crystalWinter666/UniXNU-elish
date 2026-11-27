@@ -1,0 +1,3 @@
+elish static scaffold checks passed
+RUNTIME: DarwinBoot resolves usable memory from the UEFI map; device handoff remains unverified
+elish preflight: hardware evidence and UEFI platform are ready
